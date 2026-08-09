@@ -1,0 +1,36 @@
+# Coller ce contenu
+# Environnement virtuel
+venv/
+env/
+
+# Variables secrètes
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+media/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.dblogs/
+
+# Vérifier que ces lignes sont présentes
+
+*.pyc
+staticfiles/
+
+logs/
+
+

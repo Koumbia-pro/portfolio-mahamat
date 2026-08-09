@@ -1,0 +1,630 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Portfolio professionnel de {{ profil.nom }}.">
+  <title>{{ profil.nom }} — {{ profil.titre }}</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+  {# Charger le CSS avec Django static #}
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+
+<body>
+
+  {# ═══════════════════════════════════════ #}
+  {# BOUTON MENU MOBILE                      #}
+  {# ═══════════════════════════════════════ #}
+  <button class="mobile-menu" id="mobileMenu" aria-label="Ouvrir le menu">
+    <i class="fa-solid fa-bars"></i>
+  </button>
+
+
+  {# ═══════════════════════════════════════ #}
+  {# SIDEBAR                                 #}
+  {# ═══════════════════════════════════════ #}
+  <aside class="sidebar" id="sidebar">
+
+    <div class="brand">
+      <div class="brand-logo">MH</div>
+      <div>
+        <h2>Mahamat</h2>
+        <h2>Hassan Oumar</h2>
+        <span>{{ profil.titre }}</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a class="nav-link active" href="#accueil">
+        <i class="fa-solid fa-house"></i>
+        <span>Accueil</span>
+      </a>
+      <a class="nav-link" href="#apropos">
+        <i class="fa-regular fa-user"></i>
+        <span>À propos</span>
+      </a>
+      <a class="nav-link" href="#competences">
+        <i class="fa-solid fa-layer-group"></i>
+        <span>Compétences</span>
+      </a>
+      <a class="nav-link" href="#projets">
+        <i class="fa-regular fa-folder-open"></i>
+        <span>Projets</span>
+      </a>
+      <a class="nav-link" href="#experience">
+        <i class="fa-regular fa-calendar"></i>
+        <span>Expérience</span>
+      </a>
+      <a class="nav-link" href="#services">
+        <i class="fa-solid fa-code"></i>
+        <span>Services</span>
+      </a>
+      <a class="nav-link" href="#formation">
+        <i class="fa-solid fa-graduation-cap"></i>
+        <span>Formation</span>
+      </a>
+      <a class="nav-link" href="#contact">
+        <i class="fa-regular fa-envelope"></i>
+        <span>Contact</span>
+      </a>
+    </nav>
+
+    {# Bouton télécharger CV #}
+    {% if profil.cv %}
+      <a class="cv-button" href="{% url 'telecharger_cv' %}">
+        <i class="fa-solid fa-download"></i>
+        Télécharger CV
+      </a>
+    {% else %}
+      <a class="cv-button" href="#">
+        <i class="fa-solid fa-download"></i>
+        Télécharger CV
+      </a>
+    {% endif %}
+
+    <div class="sidebar-bottom">
+      <div class="theme-row">
+        <span>Mode sombre</span>
+        <button class="switch active" id="themeSwitch">
+          <span></span>
+        </button>
+      </div>
+
+      <p>Suivez-moi</p>
+      <div class="socials">
+        {% if profil.github %}
+          <a href="{{ profil.github }}" target="_blank" aria-label="GitHub">
+            <i class="fa-brands fa-github"></i>
+          </a>
+        {% endif %}
+        {% if profil.linkedin %}
+          <a href="{{ profil.linkedin }}" target="_blank" aria-label="LinkedIn">
+            <i class="fa-brands fa-linkedin-in"></i>
+          </a>
+        {% endif %}
+        {% if profil.twitter %}
+          <a href="{{ profil.twitter }}" target="_blank" aria-label="Twitter">
+            <i class="fa-brands fa-x-twitter"></i>
+          </a>
+        {% endif %}
+        <a href="mailto:{{ profil.email }}" aria-label="Email">
+          <i class="fa-regular fa-envelope"></i>
+        </a>
+      </div>
+    </div>
+
+  </aside>
+
+
+  {# ═══════════════════════════════════════ #}
+  {# CONTENU PRINCIPAL                       #}
+  {# ═══════════════════════════════════════ #}
+  <main class="main-content">
+
+
+    {# ─────────────────────────────────────── #}
+    {# SECTION ACCUEIL                         #}
+    {# ─────────────────────────────────────── #}
+    <section class="hero section" id="accueil">
+
+      <div class="hero-content">
+        <span class="eyebrow">DÉVELOPPEUR BACKEND</span>
+
+        <h1>
+          Bonjour, je suis<br>
+          <strong>{{ profil.nom }}</strong>
+        </h1>
+
+        <p class="hero-text">
+          {{ profil.description_courte }}
+        </p>
+
+        <div class="hero-actions">
+          <a href="#projets" class="btn btn-primary">
+            Voir mes projets
+            <i class="fa-solid fa-arrow-right"></i>
+          </a>
+          <a href="#contact" class="btn btn-outline">
+            <i class="fa-regular fa-envelope"></i>
+            Me contacter
+          </a>
+        </div>
+
+        <div class="hero-socials">
+          {% if profil.github %}
+            <a href="{{ profil.github }}" target="_blank">
+              <i class="fa-brands fa-github"></i>
+            </a>
+          {% endif %}
+          {% if profil.linkedin %}
+            <a href="{{ profil.linkedin }}" target="_blank">
+              <i class="fa-brands fa-linkedin-in"></i>
+            </a>
+          {% endif %}
+          {% if profil.twitter %}
+            <a href="{{ profil.twitter }}" target="_blank">
+              <i class="fa-brands fa-x-twitter"></i>
+            </a>
+          {% endif %}
+          <a href="mailto:{{ profil.email }}">
+            <i class="fa-regular fa-envelope"></i>
+          </a>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <div class="hero-glow"></div>
+        <div class="tech-icon icon-code">
+          <i class="fa-solid fa-code"></i>
+        </div>
+        <div class="tech-icon icon-db">
+          <i class="fa-solid fa-database"></i>
+        </div>
+        <div class="portrait-ring"></div>
+        {% if profil.photo %}
+          <img
+            src="{{ profil.photo.url }}"
+            alt="{{ profil.nom }}"
+            class="profile-image"
+          >
+        {% else %}
+          <img
+            src="{% static 'images/profile.jpg' %}"
+            alt="{{ profil.nom }}"
+            class="profile-image"
+          >
+        {% endif %}
+      </div>
+
+    </section>
+
+
+    {# ─────────────────────────────────────── #}
+    {# SECTION À PROPOS                        #}
+    {# ─────────────────────────────────────── #}
+    <section class="section card about-card" id="apropos">
+
+      <div class="section-heading small-heading">
+        <span>À PROPOS DE MOI</span>
+        <h2>Qui suis-je ?</h2>
+      </div>
+
+      <div class="about-grid">
+
+        <div class="about-description">
+          <p>{{ profil.description_longue }}</p>
+          <a href="#contact" class="btn btn-outline">
+            En savoir plus sur moi
+          </a>
+        </div>
+
+        <div class="personal-info">
+          <div class="info-item">
+            <i class="fa-regular fa-user"></i>
+            <div>
+              <b>Nom</b>
+              <span>{{ profil.nom }}</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <i class="fa-regular fa-clock"></i>
+            <div>
+              <b>Âge</b>
+              <span>{{ profil.age }} ans</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <i class="fa-solid fa-location-dot"></i>
+            <div>
+              <b>Localisation</b>
+              <span>{{ profil.localisation }}</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <i class="fa-regular fa-envelope"></i>
+            <div>
+              <b>Email</b>
+              <span>{{ profil.email }}</span>
+            </div>
+          </div>
+          <div class="info-item">
+            <i class="fa-regular fa-circle-check"></i>
+            <div>
+              <b>Disponibilité</b>
+              {% if profil.disponible %}
+                <span>Disponible pour des opportunités</span>
+              {% else %}
+                <span>Non disponible actuellement</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="info-item">
+            <i class="fa-solid fa-language"></i>
+            <div>
+              <b>Langues</b>
+              <span>{{ profil.langues }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="education-highlight">
+          <div class="round-icon">
+            <i class="fa-solid fa-graduation-cap"></i>
+          </div>
+          {% with formations.first as formation_principale %}
+            {% if formation_principale %}
+              <h3>Formation</h3>
+              <strong>{{ formation_principale.diplome }}</strong>
+              <p>{{ formation_principale.etablissement }}</p>
+              <span>
+                {{ formation_principale.date_debut }}
+                —
+                {{ formation_principale.date_fin }}
+              </span>
+            {% endif %}
+          {% endwith %}
+        </div>
+
+      </div>
+
+    </section>
+
+
+    {# ─────────────────────────────────────── #}
+    {# SECTION COMPÉTENCES                     #}
+    {# ─────────────────────────────────────── #}
+    <section class="section" id="competences">
+
+      <div class="section-heading">
+        <span>COMPÉTENCES</span>
+      </div>
+
+      <div class="skills-grid">
+        {% for categorie in categories %}
+          <div class="skill-card">
+            <h3>{{ categorie.nom }}</h3>
+            {% for competence in categorie.competences.all %}
+              <div class="skill">
+                <div>
+                  <span>{{ competence.nom }}</span>
+                  <b>{{ competence.pourcentage }}%</b>
+                </div>
+                <i>
+                  <em style="width:{{ competence.pourcentage }}%"></em>
+                </i>
+              </div>
+            {% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+
+    </section>
+
+
+    {# ─────────────────────────────────────── #}
+    {# SECTION STATISTIQUES                    #}
+    {# ─────────────────────────────────────── #}
+    <section class="stats card">
+      {% for stat in statistiques %}
+        <div>
+          <i class="{{ stat.icone }}"></i>
+          <strong>{{ stat.valeur }}</strong>
+          <span>{{ stat.label }}</span>
+        </div>
+      {% endfor %}
+    </section>
+
+
+    {# ─────────────────────────────────────── #}
+    {# SECTION PROJETS                         #}
+    {# ─────────────────────────────────────── #}
+    <section class="section" id="projets">
+
+      <div class="section-heading-row">
+        <div class="section-heading">
+          <span>PROJETS RÉALISÉS</span>
+        </div>
+        <a href="#" class="view-all">
+          Voir tous les projets
+          <i class="fa-solid fa-arrow-right"></i>
+        </a>
+      </div>
+
+      <div class="projects-grid">
+        {% for projet in projets %}
+          <article class="project-card">
+
+            <div class="project-image">
+              {% if projet.image %}
+                <img
+                  src="{{ projet.image.url }}"
+                  alt="{{ projet.titre }}"
+                >
+              {% else %}
+                <img
+                  src="{% static 'images/project-placeholder.jpg' %}"
+                  alt="{{ projet.titre }}"
+                >
+              {% endif %}
+            </div>
+
+            <h3>{{ projet.titre }}</h3>
+            <p>{{ projet.description }}</p>
+
+            <div class="tags">
+              {% for tech in projet.get_technologies_list %}
+                <span>{{ tech }}</span>
+              {% endfor %}
+            </div>
+
+            {% if projet.lien %}
+              <a href="{{ projet.lien }}"
+                 target="_blank"
+                 class="project-link">
+                Voir le projet
+                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+              </a>
+            {% endif %}
+
+          </article>
+        {% endfor %}
+      </div>
+
+    </section>
+
+
+    {# ─────────────────────────────────────── #}
+    {# SECTION SERVICES                        #}
+    {# ─────────────────────────────────────── #}
+    <section class="section" id="services">
+
+      <div class="section-heading">
+        <span>MES SERVICES</span>
+      </div>
+
+      <div class="services-grid">
+        {% for service in services %}
+          <div class="service-card">
+            <div class="service-icon">
+              <i class="{{ service.icone }}"></i>
+            </div>
+            <div>
+              <h3>{{ service.titre }}</h3>
+              <p>{{ service.description }}</p>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+    </section>
+
+
+    {# ─────────────────────────────────────── #}
+    {# SECTION EXPÉRIENCE ET FORMATION         #}
+    {# ─────────────────────────────────────── #}
+    <section class="section timeline-section">
+      <div class="timeline-grid">
+
+        {# Expérience #}
+        <div id="experience">
+          <div class="section-heading">
+            <span>EXPÉRIENCE PROFESSIONNELLE</span>
+          </div>
+          <div class="timeline">
+            {% for exp in experiences %}
+              <div class="timeline-item">
+                <span class="dot"></span>
+                <small>
+                  {{ exp.date_debut }} — {{ exp.date_fin }}
+                </small>
+                <h3>{{ exp.poste }} — {{ exp.entreprise }}</h3>
+                <p>{{ exp.description }}</p>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        {# Formation #}
+        <div id="formation">
+          <div class="section-heading">
+            <span>FORMATION</span>
+          </div>
+          <div class="timeline">
+            {% for form in formations %}
+              <div class="timeline-item">
+                <span class="dot"></span>
+                <small>
+                  {{ form.date_debut }} — {{ form.date_fin }}
+                </small>
+                <h3>{{ form.diplome }}</h3>
+                <p>
+                  {{ form.etablissement }}
+                  {% if form.description %}
+                    <br>{{ form.description }}
+                  {% endif %}
+                </p>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    {# ─────────────────────────────────────── #}
+    {# SECTION CONTACT                         #}
+    {# ─────────────────────────────────────── #}
+    <section class="section card contact-section" id="contact">
+
+      <div class="contact-info">
+        <div class="section-heading">
+          <span>ME CONTACTER</span>
+        </div>
+        <p>
+          Vous avez un projet en tête ou souhaitez
+          collaborer ? N'hésitez pas à me contacter.
+        </p>
+
+        <div class="contact-item">
+          <i class="fa-regular fa-envelope"></i>
+          <div>
+            <b>Email</b>
+            <span>{{ profil.email }}</span>
+          </div>
+        </div>
+
+        <div class="contact-item">
+          <i class="fa-solid fa-phone"></i>
+          <div>
+            <b>Téléphone</b>
+            <span>{{ profil.telephone }}</span>
+          </div>
+        </div>
+
+        <div class="contact-item">
+          <i class="fa-solid fa-location-dot"></i>
+          <div>
+            <b>Localisation</b>
+            <span>{{ profil.localisation }}</span>
+          </div>
+        </div>
+      </div>
+
+      {# Formulaire de contact #}
+      <form
+        class="contact-form"
+        id="contactForm"
+        method="POST"
+        action="{% url 'contact' %}"
+      >
+        {% csrf_token %}
+
+        <div class="form-row">
+          <input
+            type="text"
+            name="name"
+            placeholder="Nom complet"
+            required
+          >
+          <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            required
+          >
+        </div>
+
+        <input
+          type="text"
+          name="subject"
+          placeholder="Sujet"
+        >
+
+        <textarea
+          name="message"
+          placeholder="Message"
+          required
+        ></textarea>
+
+        <button type="submit" class="btn btn-primary">
+          Envoyer le message
+          <i class="fa-solid fa-paper-plane"></i>
+        </button>
+
+      </form>
+
+    </section>
+
+
+    {# ─────────────────────────────────────── #}
+    {# FOOTER                                  #}
+    {# ─────────────────────────────────────── #}
+    <footer class="footer">
+
+      <div>
+        <div class="footer-brand">
+          <div class="brand-logo">MH</div>
+          <strong>{{ profil.nom }}</strong>
+        </div>
+        <p>
+          Développeur passionné par la création
+          d'applications web qui font la différence.
+        </p>
+      </div>
+
+      <div>
+        <h4>LIENS RAPIDES</h4>
+        <div class="footer-links">
+          <a href="#accueil">Accueil</a>
+          <a href="#apropos">À propos</a>
+          <a href="#projets">Projets</a>
+          <a href="#competences">Compétences</a>
+          <a href="#experience">Expérience</a>
+          <a href="#contact">Contact</a>
+        </div>
+      </div>
+
+      <div>
+        <h4>SUIVEZ-MOI</h4>
+        <div class="socials footer-socials">
+          {% if profil.github %}
+            <a href="{{ profil.github }}" target="_blank">
+              <i class="fa-brands fa-github"></i>
+            </a>
+          {% endif %}
+          {% if profil.linkedin %}
+            <a href="{{ profil.linkedin }}" target="_blank">
+              <i class="fa-brands fa-linkedin-in"></i>
+            </a>
+          {% endif %}
+          {% if profil.twitter %}
+            <a href="{{ profil.twitter }}" target="_blank">
+              <i class="fa-brands fa-x-twitter"></i>
+            </a>
+          {% endif %}
+          <a href="mailto:{{ profil.email }}">
+            <i class="fa-regular fa-envelope"></i>
+          </a>
+        </div>
+      </div>
+
+      <div class="copyright">
+        © 2025 {{ profil.nom }}. Tous droits réservés.
+      </div>
+
+    </footer>
+
+  </main>
+
+  {# Charger le JS avec Django static #}
+  <script src="{% static 'js/script.js' %}"></script>
+
+</body>
+</html>
