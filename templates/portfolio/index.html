@@ -1,630 +1,499 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="fr">
+{% load static %}<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Portfolio professionnel de {{ profil.nom }}.">
-  <title>{{ profil.nom }} — {{ profil.titre }}</title>
+  <title>{% firstof profil.nom "Mahamat Hassan Oumar" %} — {% firstof profil.titre "Data Science & Machine Learning" %}</title>
+  <meta name="description" content="{% firstof profil.description_courte 'Portfolio de Mahamat Hassan Oumar, étudiant en Master Intelligence Artificielle.' %}">
+  <meta name="theme-color" content="#05060f">
+
+  {# Aperçu lors d'un partage (LinkedIn, WhatsApp…) #}
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{% firstof profil.nom 'Mahamat Hassan Oumar' %} — Portfolio">
+  <meta property="og:description" content="{% firstof profil.description_courte 'Data Science & Machine Learning' %}">
+  <meta property="og:image" content="{% if profil.photo %}{{ request.scheme }}://{{ request.get_host }}{{ profil.photo.url }}{% else %}{{ request.scheme }}://{{ request.get_host }}{% static 'images/profile.jpg' %}{% endif %}">
+
+  {# Thème appliqué avant l'affichage pour éviter un flash #}
+  <script>
+    (function () {
+      var d = document.documentElement;
+      d.classList.add("js");
+      try {
+        var t = localStorage.getItem("theme");
+        if (t === "light" || t === "dark") d.setAttribute("data-theme", t);
+      } catch (e) {}
+    })();
+  </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-
-  {# Charger le CSS avec Django static #}
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 
 <body>
 
-  {# ═══════════════════════════════════════ #}
-  {# BOUTON MENU MOBILE                      #}
-  {# ═══════════════════════════════════════ #}
-  <button class="mobile-menu" id="mobileMenu" aria-label="Ouvrir le menu">
-    <i class="fa-solid fa-bars"></i>
-  </button>
+  {# ═══════════ PRÉCHARGEMENT ═══════════ #}
+  <div class="preloader" id="preloader" aria-hidden="true">
+    <div class="preloader-inner">
+      <div class="preloader-logo">MH</div>
+      <div class="preloader-bar"><span id="preloaderBar"></span></div>
+      <div class="preloader-count" id="preloaderCount">0</div>
+    </div>
+  </div>
 
+  {# ═══════════ ÉLÉMENTS FLOTTANTS ═══════════ #}
+  <div class="scroll-progress" id="scrollProgress"></div>
+  <div class="cursor-dot" id="cursorDot" aria-hidden="true"></div>
+  <div class="cursor-ring" id="cursorRing" aria-hidden="true"></div>
 
-  {# ═══════════════════════════════════════ #}
-  {# SIDEBAR                                 #}
-  {# ═══════════════════════════════════════ #}
-  <aside class="sidebar" id="sidebar">
+  {# ═══════════ NAVIGATION ═══════════ #}
+  <header class="nav-wrap" id="navWrap">
+    <nav class="nav" aria-label="Navigation principale">
+      <a href="#accueil" class="nav-brand" aria-label="Retour à l'accueil">
+        <span class="nav-logo">MH</span>
+      </a>
 
-    <div class="brand">
-      <div class="brand-logo">MH</div>
-      <div>
-        <h2>Mahamat</h2>
-        <h2>Hassan Oumar</h2>
-        <span>{{ profil.titre }}</span>
+      <div class="nav-links" id="navLinks">
+        <span class="nav-indicator" id="navIndicator"></span>
+        <a class="nav-link" href="#apropos">À propos</a>
+        {% if categories %}<a class="nav-link" href="#competences">Compétences</a>{% endif %}
+        {% if projets %}<a class="nav-link" href="#projets">Projets</a>{% endif %}
+        {% if services %}<a class="nav-link" href="#services">Services</a>{% endif %}
+        {% if experiences or formations %}<a class="nav-link" href="#parcours">Parcours</a>{% endif %}
+        <a class="nav-link" href="#contact">Contact</a>
+      </div>
+
+      <div class="nav-actions">
+        <button class="icon-btn" id="themeToggle" aria-label="Changer de thème">
+          <i class="fa-solid fa-moon theme-moon"></i>
+          <i class="fa-solid fa-sun theme-sun"></i>
+        </button>
+        <a class="btn btn-primary btn-sm magnetic" href="{% url 'telecharger_cv' %}">
+          <i class="fa-solid fa-download"></i><span>CV</span>
+        </a>
+        <button class="icon-btn menu-btn" id="menuBtn" aria-label="Ouvrir le menu" aria-expanded="false">
+          <span></span><span></span>
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+
+    {# ═══════════ ACCUEIL ═══════════ #}
+    <section class="hero" id="accueil">
+      <canvas class="hero-canvas" id="neuralCanvas" aria-hidden="true"></canvas>
+      <div class="hero-aurora" aria-hidden="true"></div>
+
+      <div class="container hero-grid">
+        <div class="hero-content">
+          {% if profil.disponible and profil.statut %}
+            <span class="status-pill reveal">
+              <span class="pulse-dot"></span>
+              {{ profil.statut }}
+            </span>
+          {% endif %}
+
+          <h1 class="hero-title">
+            <span class="hero-hello reveal">Bonjour, je suis</span>
+            <span class="hero-name split-text">{% firstof profil.nom "Mahamat Hassan Oumar" %}</span>
+          </h1>
+
+          {% with roles=profil.get_roles %}
+          {% if roles %}
+            <p class="hero-role reveal">
+              <span class="role-static">Je suis</span>
+              <span class="typewriter" id="typewriter" data-words="{{ roles|join:'|' }}">{{ roles.0 }}</span><span class="caret" aria-hidden="true"></span>
+            </p>
+          {% endif %}
+          {% endwith %}
+
+          <p class="hero-text reveal">
+            {% firstof profil.description_courte "Étudiant en Master 1 Intelligence Artificielle, je transforme des données brutes en modèles prédictifs, en tableaux de bord et en applications web utiles." %}
+          </p>
+
+          <div class="hero-actions reveal">
+            <a href="#projets" class="btn btn-primary btn-lg magnetic">
+              Voir mes projets <i class="fa-solid fa-arrow-right"></i>
+            </a>
+            <a href="#contact" class="btn btn-ghost btn-lg magnetic">
+              <i class="fa-regular fa-paper-plane"></i> Me contacter
+            </a>
+          </div>
+
+          <div class="hero-socials reveal">
+            {% if profil.github %}<a href="{{ profil.github }}" target="_blank" rel="noopener" aria-label="GitHub" class="magnetic"><i class="fa-brands fa-github"></i></a>{% endif %}
+            {% if profil.linkedin %}<a href="{{ profil.linkedin }}" target="_blank" rel="noopener" aria-label="LinkedIn" class="magnetic"><i class="fa-brands fa-linkedin-in"></i></a>{% endif %}
+            {% if profil.twitter %}<a href="{{ profil.twitter }}" target="_blank" rel="noopener" aria-label="X" class="magnetic"><i class="fa-brands fa-x-twitter"></i></a>{% endif %}
+            {% if profil.email %}<a href="mailto:{{ profil.email }}" aria-label="Email" class="magnetic"><i class="fa-regular fa-envelope"></i></a>{% endif %}
+          </div>
+        </div>
+
+        <div class="hero-visual reveal">
+          <div class="portrait">
+            <div class="portrait-ring"></div>
+            <div class="portrait-glow"></div>
+            {% if profil.photo %}
+              <img src="{{ profil.photo.url }}" alt="Portrait de {{ profil.nom }}" class="portrait-img">
+            {% else %}
+              <img src="{% static 'images/profile.jpg' %}" alt="Portrait de {% firstof profil.nom 'Mahamat Hassan Oumar' %}" class="portrait-img">
+            {% endif %}
+
+            {% if technologies_orbite %}
+              <div class="orbit" aria-hidden="true" style="--n: {{ technologies_orbite|length }}">
+                {% for tech in technologies_orbite %}
+                  <span class="orbit-item" style="--i:{{ forloop.counter0 }}" title="{{ tech.nom }}"><i class="{{ tech.icone }}"></i></span>
+                {% endfor %}
+              </div>
+            {% endif %}
+
+            {% with formation=formations.first %}
+              {% if formation %}
+                <div class="float-card fc-1">
+                  <i class="fa-solid fa-graduation-cap"></i>
+                  <div><b>{{ formation.diplome|truncatechars:28 }}</b><span>{{ formation.etablissement|truncatechars:30 }}</span></div>
+                </div>
+              {% endif %}
+            {% endwith %}
+            {% if profil.localisation %}
+              {% with lieu=profil.get_ville_pays %}
+                <div class="float-card fc-2">
+                  <i class="fa-solid fa-location-dot"></i>
+                  <div><b>{{ lieu.ville }}</b>{% if lieu.pays %}<span>{{ lieu.pays }}</span>{% endif %}</div>
+                </div>
+              {% endwith %}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <a href="#apropos" class="scroll-hint" aria-label="Défiler vers le bas">
+        <span class="mouse"><span class="wheel"></span></span>
+      </a>
+    </section>
+
+    {# ═══════════ BANDEAU DE TECHNOLOGIES ═══════════ #}
+    {% if technologies %}
+    <div class="marquee" aria-label="Technologies">
+      <div class="marquee-track">
+        {% for _ in "12" %}
+          <div class="marquee-group" {% if forloop.last %}aria-hidden="true"{% endif %}>
+            {% for tech in technologies %}<span><i class="{{ tech.icone }}"></i> {{ tech.nom }}</span>{% endfor %}
+          </div>
+        {% endfor %}
       </div>
     </div>
-
-    <nav class="sidebar-nav">
-      <a class="nav-link active" href="#accueil">
-        <i class="fa-solid fa-house"></i>
-        <span>Accueil</span>
-      </a>
-      <a class="nav-link" href="#apropos">
-        <i class="fa-regular fa-user"></i>
-        <span>À propos</span>
-      </a>
-      <a class="nav-link" href="#competences">
-        <i class="fa-solid fa-layer-group"></i>
-        <span>Compétences</span>
-      </a>
-      <a class="nav-link" href="#projets">
-        <i class="fa-regular fa-folder-open"></i>
-        <span>Projets</span>
-      </a>
-      <a class="nav-link" href="#experience">
-        <i class="fa-regular fa-calendar"></i>
-        <span>Expérience</span>
-      </a>
-      <a class="nav-link" href="#services">
-        <i class="fa-solid fa-code"></i>
-        <span>Services</span>
-      </a>
-      <a class="nav-link" href="#formation">
-        <i class="fa-solid fa-graduation-cap"></i>
-        <span>Formation</span>
-      </a>
-      <a class="nav-link" href="#contact">
-        <i class="fa-regular fa-envelope"></i>
-        <span>Contact</span>
-      </a>
-    </nav>
-
-    {# Bouton télécharger CV #}
-    {% if profil.cv %}
-      <a class="cv-button" href="{% url 'telecharger_cv' %}">
-        <i class="fa-solid fa-download"></i>
-        Télécharger CV
-      </a>
-    {% else %}
-      <a class="cv-button" href="#">
-        <i class="fa-solid fa-download"></i>
-        Télécharger CV
-      </a>
     {% endif %}
 
-    <div class="sidebar-bottom">
-      <div class="theme-row">
-        <span>Mode sombre</span>
-        <button class="switch active" id="themeSwitch">
-          <span></span>
-        </button>
-      </div>
-
-      <p>Suivez-moi</p>
-      <div class="socials">
-        {% if profil.github %}
-          <a href="{{ profil.github }}" target="_blank" aria-label="GitHub">
-            <i class="fa-brands fa-github"></i>
-          </a>
-        {% endif %}
-        {% if profil.linkedin %}
-          <a href="{{ profil.linkedin }}" target="_blank" aria-label="LinkedIn">
-            <i class="fa-brands fa-linkedin-in"></i>
-          </a>
-        {% endif %}
-        {% if profil.twitter %}
-          <a href="{{ profil.twitter }}" target="_blank" aria-label="Twitter">
-            <i class="fa-brands fa-x-twitter"></i>
-          </a>
-        {% endif %}
-        <a href="mailto:{{ profil.email }}" aria-label="Email">
-          <i class="fa-regular fa-envelope"></i>
-        </a>
-      </div>
-    </div>
-
-  </aside>
-
-
-  {# ═══════════════════════════════════════ #}
-  {# CONTENU PRINCIPAL                       #}
-  {# ═══════════════════════════════════════ #}
-  <main class="main-content">
-
-
-    {# ─────────────────────────────────────── #}
-    {# SECTION ACCUEIL                         #}
-    {# ─────────────────────────────────────── #}
-    <section class="hero section" id="accueil">
-
-      <div class="hero-content">
-        <span class="eyebrow">DÉVELOPPEUR BACKEND</span>
-
-        <h1>
-          Bonjour, je suis<br>
-          <strong>{{ profil.nom }}</strong>
-        </h1>
-
-        <p class="hero-text">
-          {{ profil.description_courte }}
-        </p>
-
-        <div class="hero-actions">
-          <a href="#projets" class="btn btn-primary">
-            Voir mes projets
-            <i class="fa-solid fa-arrow-right"></i>
-          </a>
-          <a href="#contact" class="btn btn-outline">
-            <i class="fa-regular fa-envelope"></i>
-            Me contacter
-          </a>
+    {# ═══════════ À PROPOS ═══════════ #}
+    <section class="section" id="apropos">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">01 · À propos</span>
+          <h2 class="section-title">Des données à l'<span class="gradient-text">impact</span>.</h2>
         </div>
 
-        <div class="hero-socials">
-          {% if profil.github %}
-            <a href="{{ profil.github }}" target="_blank">
-              <i class="fa-brands fa-github"></i>
-            </a>
-          {% endif %}
-          {% if profil.linkedin %}
-            <a href="{{ profil.linkedin }}" target="_blank">
-              <i class="fa-brands fa-linkedin-in"></i>
-            </a>
-          {% endif %}
-          {% if profil.twitter %}
-            <a href="{{ profil.twitter }}" target="_blank">
-              <i class="fa-brands fa-x-twitter"></i>
-            </a>
-          {% endif %}
-          <a href="mailto:{{ profil.email }}">
-            <i class="fa-regular fa-envelope"></i>
-          </a>
-        </div>
-      </div>
-
-      <div class="hero-visual">
-        <div class="hero-glow"></div>
-        <div class="tech-icon icon-code">
-          <i class="fa-solid fa-code"></i>
-        </div>
-        <div class="tech-icon icon-db">
-          <i class="fa-solid fa-database"></i>
-        </div>
-        <div class="portrait-ring"></div>
-        {% if profil.photo %}
-          <img
-            src="{{ profil.photo.url }}"
-            alt="{{ profil.nom }}"
-            class="profile-image"
-          >
-        {% else %}
-          <img
-            src="{% static 'images/profile.jpg' %}"
-            alt="{{ profil.nom }}"
-            class="profile-image"
-          >
-        {% endif %}
-      </div>
-
-    </section>
-
-
-    {# ─────────────────────────────────────── #}
-    {# SECTION À PROPOS                        #}
-    {# ─────────────────────────────────────── #}
-    <section class="section card about-card" id="apropos">
-
-      <div class="section-heading small-heading">
-        <span>À PROPOS DE MOI</span>
-        <h2>Qui suis-je ?</h2>
-      </div>
-
-      <div class="about-grid">
-
-        <div class="about-description">
-          <p>{{ profil.description_longue }}</p>
-          <a href="#contact" class="btn btn-outline">
-            En savoir plus sur moi
-          </a>
-        </div>
-
-        <div class="personal-info">
-          <div class="info-item">
-            <i class="fa-regular fa-user"></i>
-            <div>
-              <b>Nom</b>
-              <span>{{ profil.nom }}</span>
-            </div>
-          </div>
-          <div class="info-item">
-            <i class="fa-regular fa-clock"></i>
-            <div>
-              <b>Âge</b>
-              <span>{{ profil.age }} ans</span>
-            </div>
-          </div>
-          <div class="info-item">
-            <i class="fa-solid fa-location-dot"></i>
-            <div>
-              <b>Localisation</b>
-              <span>{{ profil.localisation }}</span>
-            </div>
-          </div>
-          <div class="info-item">
-            <i class="fa-regular fa-envelope"></i>
-            <div>
-              <b>Email</b>
-              <span>{{ profil.email }}</span>
-            </div>
-          </div>
-          <div class="info-item">
-            <i class="fa-regular fa-circle-check"></i>
-            <div>
-              <b>Disponibilité</b>
-              {% if profil.disponible %}
-                <span>Disponible pour des opportunités</span>
-              {% else %}
-                <span>Non disponible actuellement</span>
-              {% endif %}
-            </div>
-          </div>
-          <div class="info-item">
-            <i class="fa-solid fa-language"></i>
-            <div>
-              <b>Langues</b>
-              <span>{{ profil.langues }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="education-highlight">
-          <div class="round-icon">
-            <i class="fa-solid fa-graduation-cap"></i>
-          </div>
-          {% with formations.first as formation_principale %}
-            {% if formation_principale %}
-              <h3>Formation</h3>
-              <strong>{{ formation_principale.diplome }}</strong>
-              <p>{{ formation_principale.etablissement }}</p>
-              <span>
-                {{ formation_principale.date_debut }}
-                —
-                {{ formation_principale.date_fin }}
-              </span>
+        <div class="about-grid">
+          <div class="about-text reveal">
+            {% if profil.description_longue %}
+              {{ profil.description_longue|linebreaks }}
+            {% else %}
+              <p>Je suis étudiant en Master 1 Intelligence Artificielle à l'Université Aube Nouvelle de Ouagadougou. J'aime construire des solutions data de bout en bout, de la préparation des données jusqu'aux applications web.</p>
             {% endif %}
-          {% endwith %}
-        </div>
 
-      </div>
+            <ul class="info-list">
+              {% if profil.localisation %}<li><i class="fa-solid fa-location-dot"></i><span>Localisation</span><b>{{ profil.localisation }}</b></li>{% endif %}
+              {% if profil.langues %}<li><i class="fa-solid fa-language"></i><span>Langues</span><b>{{ profil.langues }}</b></li>{% endif %}
+              {% if profil.age %}<li><i class="fa-regular fa-calendar"></i><span>Âge</span><b>{{ profil.age }} ans</b></li>{% endif %}
+              {% if profil.email %}<li><i class="fa-regular fa-envelope"></i><span>Email</span><b>{{ profil.email }}</b></li>{% endif %}
+            </ul>
+          </div>
 
-    </section>
-
-
-    {# ─────────────────────────────────────── #}
-    {# SECTION COMPÉTENCES                     #}
-    {# ─────────────────────────────────────── #}
-    <section class="section" id="competences">
-
-      <div class="section-heading">
-        <span>COMPÉTENCES</span>
-      </div>
-
-      <div class="skills-grid">
-        {% for categorie in categories %}
-          <div class="skill-card">
-            <h3>{{ categorie.nom }}</h3>
-            {% for competence in categorie.competences.all %}
-              <div class="skill">
-                <div>
-                  <span>{{ competence.nom }}</span>
-                  <b>{{ competence.pourcentage }}%</b>
-                </div>
-                <i>
-                  <em style="width:{{ competence.pourcentage }}%"></em>
-                </i>
+          <div class="stats-grid">
+            {% for stat in statistiques %}
+              <div class="stat-card reveal spotlight" style="--d:{{ forloop.counter0 }}">
+                <i class="{{ stat.icone }}"></i>
+                <strong class="counter" data-value="{{ stat.valeur }}">{{ stat.valeur }}</strong>
+                <span>{{ stat.label }}</span>
               </div>
             {% endfor %}
           </div>
-        {% endfor %}
+        </div>
       </div>
-
     </section>
 
-
-    {# ─────────────────────────────────────── #}
-    {# SECTION STATISTIQUES                    #}
-    {# ─────────────────────────────────────── #}
-    <section class="stats card">
-      {% for stat in statistiques %}
-        <div>
-          <i class="{{ stat.icone }}"></i>
-          <strong>{{ stat.valeur }}</strong>
-          <span>{{ stat.label }}</span>
+    {# ═══════════ COMPÉTENCES ═══════════ #}
+    {% if categories %}
+    <section class="section" id="competences">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">02 · Compétences</span>
+          <h2 class="section-title">Ma <span class="gradient-text">boîte à outils</span>.</h2>
         </div>
-      {% endfor %}
-    </section>
 
-
-    {# ─────────────────────────────────────── #}
-    {# SECTION PROJETS                         #}
-    {# ─────────────────────────────────────── #}
-    <section class="section" id="projets">
-
-      <div class="section-heading-row">
-        <div class="section-heading">
-          <span>PROJETS RÉALISÉS</span>
-        </div>
-        <a href="#" class="view-all">
-          Voir tous les projets
-          <i class="fa-solid fa-arrow-right"></i>
-        </a>
-      </div>
-
-      <div class="projects-grid">
-        {% for projet in projets %}
-          <article class="project-card">
-
-            <div class="project-image">
-              {% if projet.image %}
-                <img
-                  src="{{ projet.image.url }}"
-                  alt="{{ projet.titre }}"
-                >
-              {% else %}
-                <img
-                  src="{% static 'images/project-placeholder.jpg' %}"
-                  alt="{{ projet.titre }}"
-                >
-              {% endif %}
-            </div>
-
-            <h3>{{ projet.titre }}</h3>
-            <p>{{ projet.description }}</p>
-
-            <div class="tags">
-              {% for tech in projet.get_technologies_list %}
-                <span>{{ tech }}</span>
+        <div class="skills-grid">
+          {% for categorie in categories %}
+            <article class="skill-card reveal spotlight" style="--d:{{ forloop.counter0 }}">
+              <div class="skill-card-head">
+                <span class="skill-icon"><i class="fa-solid {% cycle 'fa-brain' 'fa-chart-simple' 'fa-cloud' 'fa-globe' 'fa-toolbox' %}"></i></span>
+                <h3>{{ categorie.nom }}</h3>
+              </div>
+              {% for competence in categorie.competences.all %}
+                <div class="skill">
+                  <div class="skill-label">
+                    <span>{{ competence.nom }}</span>
+                    <b>{{ competence.pourcentage }}%</b>
+                  </div>
+                  <div class="skill-track"><span class="skill-fill" style="--w:{{ competence.pourcentage }}%"></span></div>
+                </div>
               {% endfor %}
-            </div>
-
-            {% if projet.lien %}
-              <a href="{{ projet.lien }}"
-                 target="_blank"
-                 class="project-link">
-                Voir le projet
-                <i class="fa-solid fa-arrow-up-right-from-square"></i>
-              </a>
-            {% endif %}
-
-          </article>
-        {% endfor %}
+            </article>
+          {% endfor %}
+        </div>
       </div>
-
     </section>
+    {% endif %}
 
+    {# ═══════════ PROJETS ═══════════ #}
+    {% if projets %}
+    <section class="section" id="projets">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">03 · Projets</span>
+          <h2 class="section-title">Ce que j'ai <span class="gradient-text">construit</span>.</h2>
+        </div>
 
-    {# ─────────────────────────────────────── #}
-    {# SECTION SERVICES                        #}
-    {# ─────────────────────────────────────── #}
-    <section class="section" id="services">
+        {% if categories_projets|length > 1 %}
+          <div class="filters reveal" role="group" aria-label="Filtrer les projets">
+            <span class="filter-indicator" aria-hidden="true"></span>
+            <button type="button" class="filter-btn active" data-filter="*" aria-pressed="true">Tous</button>
+            {% for cat in categories_projets %}
+              <button type="button" class="filter-btn" data-filter="{{ cat|slugify }}" aria-pressed="false">{{ cat }}</button>
+            {% endfor %}
+          </div>
+        {% endif %}
 
-      <div class="section-heading">
-        <span>MES SERVICES</span>
+        <div class="projects-grid">
+          {% for projet in projets %}
+            <article class="project-card reveal tilt spotlight" style="--d:{{ forloop.counter0 }}" data-category="{{ projet.categorie|slugify }}">
+              <div class="project-cover cover-{% cycle '1' '2' '3' '4' %}">
+                {% if projet.image %}
+                  <img src="{{ projet.image.url }}" alt="Aperçu du projet {{ projet.titre }}" loading="lazy">
+                {% else %}
+                  <span class="cover-grid" aria-hidden="true"></span>
+                  <i class="cover-icon fa-solid {% cycle 'fa-wheat-awn' 'fa-chart-line' 'fa-laptop-code' 'fa-cloud' %}" aria-hidden="true"></i>
+                {% endif %}
+                <span class="project-index">{{ forloop.counter|stringformat:"02d" }}</span>
+                {% if projet.categorie %}<span class="project-cat">{{ projet.categorie }}</span>{% endif %}
+              </div>
+              <div class="project-body">
+                <h3>{{ projet.titre }}</h3>
+                <p>{{ projet.description }}</p>
+                <div class="tags">
+                  {% for tech in projet.get_technologies_list %}<span>{{ tech }}</span>{% endfor %}
+                </div>
+                {% if projet.lien or projet.lien_code %}
+                  <div class="project-links">
+                    {% if projet.lien %}
+                      <a href="{{ projet.lien }}" target="_blank" rel="noopener" class="project-link">
+                        Voir le projet <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                      </a>
+                    {% endif %}
+                    {% if projet.lien_code %}
+                      <a href="{{ projet.lien_code }}" target="_blank" rel="noopener" class="project-link">
+                        <i class="fa-brands fa-github"></i> Code source
+                      </a>
+                    {% endif %}
+                  </div>
+                {% endif %}
+              </div>
+            </article>
+          {% endfor %}
+        </div>
       </div>
+    </section>
+    {% endif %}
 
-      <div class="services-grid">
-        {% for service in services %}
-          <div class="service-card">
-            <div class="service-icon">
-              <i class="{{ service.icone }}"></i>
-            </div>
-            <div>
+    {# ═══════════ SERVICES ═══════════ #}
+    {% if services %}
+    <section class="section" id="services">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">04 · Services</span>
+          <h2 class="section-title">Comment je peux <span class="gradient-text">vous aider</span>.</h2>
+        </div>
+
+        <div class="services-grid">
+          {% for service in services %}
+            <article class="service-card reveal spotlight" style="--d:{{ forloop.counter0 }}">
+              <span class="service-num">{{ forloop.counter|stringformat:"02d" }}</span>
+              <span class="service-icon"><i class="{{ service.icone }}"></i></span>
               <h3>{{ service.titre }}</h3>
               <p>{{ service.description }}</p>
+            </article>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    {# ═══════════ PARCOURS ═══════════ #}
+    {% if experiences or formations %}
+    <section class="section" id="parcours">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">05 · Parcours</span>
+          <h2 class="section-title">Mon <span class="gradient-text">chemin</span> jusqu'ici.</h2>
+        </div>
+
+        <div class="timeline-grid">
+          {% if experiences %}
+          <div class="timeline-col">
+            <h3 class="timeline-title reveal"><i class="fa-solid fa-briefcase"></i> Expérience</h3>
+            <div class="timeline">
+              <span class="timeline-line"><span class="timeline-progress"></span></span>
+              {% for exp in experiences %}
+                <div class="timeline-item reveal">
+                  <span class="timeline-dot"></span>
+                  <span class="timeline-date">{{ exp.date_debut }}{% if exp.date_fin and exp.date_fin != exp.date_debut %} — {{ exp.date_fin }}{% endif %}</span>
+                  <h4>{{ exp.poste }}</h4>
+                  <span class="timeline-place">{{ exp.entreprise }}</span>
+                  <p>{{ exp.description }}</p>
+                </div>
+              {% endfor %}
             </div>
           </div>
-        {% endfor %}
-      </div>
+          {% endif %}
 
-    </section>
-
-
-    {# ─────────────────────────────────────── #}
-    {# SECTION EXPÉRIENCE ET FORMATION         #}
-    {# ─────────────────────────────────────── #}
-    <section class="section timeline-section">
-      <div class="timeline-grid">
-
-        {# Expérience #}
-        <div id="experience">
-          <div class="section-heading">
-            <span>EXPÉRIENCE PROFESSIONNELLE</span>
+          {% if formations %}
+          <div class="timeline-col">
+            <h3 class="timeline-title reveal"><i class="fa-solid fa-graduation-cap"></i> Formation</h3>
+            <div class="timeline">
+              <span class="timeline-line"><span class="timeline-progress"></span></span>
+              {% for form in formations %}
+                <div class="timeline-item reveal">
+                  <span class="timeline-dot"></span>
+                  <span class="timeline-date">{{ form.date_debut }}{% if form.date_fin and form.date_fin != form.date_debut %} — {{ form.date_fin }}{% endif %}</span>
+                  <h4>{{ form.diplome }}</h4>
+                  <span class="timeline-place">{{ form.etablissement }}</span>
+                  {% if form.description %}<p>{{ form.description }}</p>{% endif %}
+                </div>
+              {% endfor %}
+            </div>
           </div>
-          <div class="timeline">
-            {% for exp in experiences %}
-              <div class="timeline-item">
-                <span class="dot"></span>
-                <small>
-                  {{ exp.date_debut }} — {{ exp.date_fin }}
-                </small>
-                <h3>{{ exp.poste }} — {{ exp.entreprise }}</h3>
-                <p>{{ exp.description }}</p>
-              </div>
-            {% endfor %}
-          </div>
+          {% endif %}
         </div>
-
-        {# Formation #}
-        <div id="formation">
-          <div class="section-heading">
-            <span>FORMATION</span>
-          </div>
-          <div class="timeline">
-            {% for form in formations %}
-              <div class="timeline-item">
-                <span class="dot"></span>
-                <small>
-                  {{ form.date_debut }} — {{ form.date_fin }}
-                </small>
-                <h3>{{ form.diplome }}</h3>
-                <p>
-                  {{ form.etablissement }}
-                  {% if form.description %}
-                    <br>{{ form.description }}
-                  {% endif %}
-                </p>
-              </div>
-            {% endfor %}
-          </div>
-        </div>
-
       </div>
     </section>
+    {% endif %}
 
+    {# ═══════════ CONTACT ═══════════ #}
+    <section class="section" id="contact">
+      <div class="container">
+        <div class="contact-card reveal">
+          <div class="contact-glow" aria-hidden="true"></div>
 
-    {# ─────────────────────────────────────── #}
-    {# SECTION CONTACT                         #}
-    {# ─────────────────────────────────────── #}
-    <section class="section card contact-section" id="contact">
+          <div class="contact-info">
+            <span class="eyebrow">06 · Contact</span>
+            <h2 class="section-title">Travaillons <span class="gradient-text">ensemble</span>.</h2>
+            {% if profil.texte_contact %}<p>{{ profil.texte_contact }}</p>{% endif %}
 
-      <div class="contact-info">
-        <div class="section-heading">
-          <span>ME CONTACTER</span>
-        </div>
-        <p>
-          Vous avez un projet en tête ou souhaitez
-          collaborer ? N'hésitez pas à me contacter.
-        </p>
-
-        <div class="contact-item">
-          <i class="fa-regular fa-envelope"></i>
-          <div>
-            <b>Email</b>
-            <span>{{ profil.email }}</span>
+            <div class="contact-items">
+              {% if profil.email %}
+                <button type="button" class="contact-item" data-copy="{{ profil.email }}">
+                  <i class="fa-regular fa-envelope"></i>
+                  <span><small>Email</small><b>{{ profil.email }}</b></span>
+                  <i class="fa-regular fa-copy copy-icon" aria-hidden="true"></i>
+                </button>
+              {% endif %}
+              {% if profil.telephone %}
+                <a class="contact-item" href="tel:{{ profil.telephone|cut:' ' }}">
+                  <i class="fa-solid fa-phone"></i>
+                  <span><small>Téléphone</small><b>{{ profil.telephone }}</b></span>
+                </a>
+              {% endif %}
+              {% if profil.localisation %}
+                <div class="contact-item">
+                  <i class="fa-solid fa-location-dot"></i>
+                  <span><small>Localisation</small><b>{{ profil.localisation }}</b></span>
+                </div>
+              {% endif %}
+            </div>
           </div>
-        </div>
 
-        <div class="contact-item">
-          <i class="fa-solid fa-phone"></i>
-          <div>
-            <b>Téléphone</b>
-            <span>{{ profil.telephone }}</span>
-          </div>
-        </div>
-
-        <div class="contact-item">
-          <i class="fa-solid fa-location-dot"></i>
-          <div>
-            <b>Localisation</b>
-            <span>{{ profil.localisation }}</span>
-          </div>
+          <form class="contact-form" id="contactForm" method="POST" action="{% url 'contact' %}" novalidate>
+            {% csrf_token %}
+            <div class="form-row">
+              <label class="field">
+                <input type="text" name="name" placeholder=" " required maxlength="100" autocomplete="name">
+                <span>Nom complet</span>
+              </label>
+              <label class="field">
+                <input type="email" name="email" placeholder=" " required autocomplete="email">
+                <span>Email</span>
+              </label>
+            </div>
+            <label class="field">
+              <input type="text" name="subject" placeholder=" " maxlength="200">
+              <span>Sujet</span>
+            </label>
+            <label class="field">
+              <textarea name="message" placeholder=" " required maxlength="5000" rows="5"></textarea>
+              <span>Votre message</span>
+            </label>
+            <button type="submit" class="btn btn-primary btn-lg btn-block magnetic">
+              <span class="btn-text">Envoyer le message</span>
+              <i class="fa-solid fa-paper-plane"></i>
+            </button>
+          </form>
         </div>
       </div>
-
-      {# Formulaire de contact #}
-      <form
-        class="contact-form"
-        id="contactForm"
-        method="POST"
-        action="{% url 'contact' %}"
-      >
-        {% csrf_token %}
-
-        <div class="form-row">
-          <input
-            type="text"
-            name="name"
-            placeholder="Nom complet"
-            required
-          >
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            required
-          >
-        </div>
-
-        <input
-          type="text"
-          name="subject"
-          placeholder="Sujet"
-        >
-
-        <textarea
-          name="message"
-          placeholder="Message"
-          required
-        ></textarea>
-
-        <button type="submit" class="btn btn-primary">
-          Envoyer le message
-          <i class="fa-solid fa-paper-plane"></i>
-        </button>
-
-      </form>
-
     </section>
-
-
-    {# ─────────────────────────────────────── #}
-    {# FOOTER                                  #}
-    {# ─────────────────────────────────────── #}
-    <footer class="footer">
-
-      <div>
-        <div class="footer-brand">
-          <div class="brand-logo">MH</div>
-          <strong>{{ profil.nom }}</strong>
-        </div>
-        <p>
-          Développeur passionné par la création
-          d'applications web qui font la différence.
-        </p>
-      </div>
-
-      <div>
-        <h4>LIENS RAPIDES</h4>
-        <div class="footer-links">
-          <a href="#accueil">Accueil</a>
-          <a href="#apropos">À propos</a>
-          <a href="#projets">Projets</a>
-          <a href="#competences">Compétences</a>
-          <a href="#experience">Expérience</a>
-          <a href="#contact">Contact</a>
-        </div>
-      </div>
-
-      <div>
-        <h4>SUIVEZ-MOI</h4>
-        <div class="socials footer-socials">
-          {% if profil.github %}
-            <a href="{{ profil.github }}" target="_blank">
-              <i class="fa-brands fa-github"></i>
-            </a>
-          {% endif %}
-          {% if profil.linkedin %}
-            <a href="{{ profil.linkedin }}" target="_blank">
-              <i class="fa-brands fa-linkedin-in"></i>
-            </a>
-          {% endif %}
-          {% if profil.twitter %}
-            <a href="{{ profil.twitter }}" target="_blank">
-              <i class="fa-brands fa-x-twitter"></i>
-            </a>
-          {% endif %}
-          <a href="mailto:{{ profil.email }}">
-            <i class="fa-regular fa-envelope"></i>
-          </a>
-        </div>
-      </div>
-
-      <div class="copyright">
-        © 2025 {{ profil.nom }}. Tous droits réservés.
-      </div>
-
-    </footer>
 
   </main>
 
-  {# Charger le JS avec Django static #}
-  <script src="{% static 'js/script.js' %}"></script>
+  {# ═══════════ PIED DE PAGE ═══════════ #}
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-cta reveal">
+        {% with phrase=profil.get_footer_parts %}
+          {% if phrase %}
+            <p class="footer-big">{{ phrase.debut }}{% if phrase.debut %} {% endif %}<span class="gradient-text">{{ phrase.fin }}</span>{{ phrase.ponctuation }}</p>
+          {% endif %}
+        {% endwith %}
+        <a href="#contact" class="btn btn-primary btn-lg magnetic">Démarrer une conversation <i class="fa-solid fa-arrow-right"></i></a>
+      </div>
 
+      <div class="footer-bottom">
+        <div class="footer-brand">
+          <span class="nav-logo">MH</span>
+          <span>© <span id="year">2026</span> {% firstof profil.nom "Mahamat Hassan Oumar" %}</span>
+        </div>
+        <div class="footer-links">
+          <a href="#apropos">À propos</a>
+          <a href="#projets">Projets</a>
+          <a href="#parcours">Parcours</a>
+          <a href="#contact">Contact</a>
+        </div>
+        <div class="socials">
+          {% if profil.github %}<a href="{{ profil.github }}" target="_blank" rel="noopener" aria-label="GitHub"><i class="fa-brands fa-github"></i></a>{% endif %}
+          {% if profil.linkedin %}<a href="{{ profil.linkedin }}" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>{% endif %}
+          {% if profil.twitter %}<a href="{{ profil.twitter }}" target="_blank" rel="noopener" aria-label="X"><i class="fa-brands fa-x-twitter"></i></a>{% endif %}
+          {% if profil.email %}<a href="mailto:{{ profil.email }}" aria-label="Email"><i class="fa-regular fa-envelope"></i></a>{% endif %}
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <button class="back-to-top" id="backToTop" aria-label="Retour en haut">
+    <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" pathLength="100"></circle></svg>
+    <i class="fa-solid fa-arrow-up"></i>
+  </button>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="{% static 'js/script.js' %}" defer></script>
 </body>
 </html>

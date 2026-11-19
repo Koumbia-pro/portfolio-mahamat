@@ -8,7 +8,10 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_protect
-from django.utils.html import escape
+from django.contrib.staticfiles import finders
+from django.contrib.staticfiles.storage import staticfiles_storage
+from django.db.models import F
+from django.utils import timezone
 import logging
 import re
 
@@ -21,7 +24,13 @@ from .models import (
     Experience,
     Formation,
     MessageContact,
+    Technologie,
+    VisiteJour,
 )
+
+CV_STATIQUE = "cv/CV_Mahamat_Hassan_Oumar.pdf"
+ROBOTS = re.compile(r"bot|crawl|spider|slurp|preview|facebookexternalhit|whatsapp|curl|wget|python-requests|headless", re.I)
+MOBILE = re.compile(r"mobile|android|iphone|ipad", re.I)
 
 # Logger pour cette application
 logger = logging.getLogger("portfolio")
@@ -34,6 +43,29 @@ def valider_email(email):
     """Valider le format de l'email."""
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
+
+
+# ─────────────────────────────────────────────
+# FONCTION UTILITAIRE — STATISTIQUES DE VISITES
+# ─────────────────────────────────────────────
+def est_visiteur_reel(request):
+    """Ignorer les robots et l'administrateur connecté."""
+    if request.user.is_authenticated and request.user.is_staff:
+        return False
+    return not ROBOTS.search(request.META.get("HTTP_USER_AGENT", ""))
+
+
+def compter(champ, request=None):
+    """Incrémenter un compteur du jour sans stocker de donnée personnelle."""
+    try:
+        aujourd_hui = timezone.localdate()
+        VisiteJour.objects.get_or_create(date=aujourd_hui)
+        champs = {champ: F(champ) + 1}
+        if champ == "vues" and request and MOBILE.search(request.META.get("HTTP_USER_AGENT", "")):
+            champs["vues_mobile"] = F("vues_mobile") + 1
+        VisiteJour.objects.filter(date=aujourd_hui).update(**champs)
+    except Exception as e:  # les statistiques ne doivent jamais casser le site
+        logger.warning(f"Statistiques indisponibles : {e}")
 
 
 # ─────────────────────────────────────────────
@@ -61,6 +93,15 @@ def index(request):
 
     formations = Formation.objects.all()
 
+    technologies = Technologie.objects.all()
+
+    # Un visiteur est compté une seule fois par jour
+    if est_visiteur_reel(request):
+        aujourd_hui = timezone.localdate().isoformat()
+        if request.session.get("vu_le") != aujourd_hui:
+            request.session["vu_le"] = aujourd_hui
+            compter("vues", request)
+
     context = {
         "profil": profil,
         "categories": categories,
@@ -69,6 +110,9 @@ def index(request):
         "services": services,
         "experiences": experiences,
         "formations": formations,
+        "technologies": technologies,
+        "technologies_orbite": [t for t in technologies if t.afficher_orbite][:5],
+        "categories_projets": sorted({p.categorie for p in projets if p.categorie}),
     }
 
     return render(
@@ -89,10 +133,12 @@ def contact(request):
     """
 
     # Récupérer et nettoyer les données
-    nom     = escape(request.POST.get("name", "").strip())
-    email   = escape(request.POST.get("email", "").strip())
-    sujet   = escape(request.POST.get("subject", "").strip())
-    message = escape(request.POST.get("message", "").strip())
+    # Pas d'échappement ici : Django échappe à l'affichage,
+    # et l'email est envoyé en texte brut.
+    nom     = request.POST.get("name", "").strip()
+    email   = request.POST.get("email", "").strip()
+    sujet   = request.POST.get("subject", "").strip()[:200]
+    message = request.POST.get("message", "").strip()
 
     # Validation des champs obligatoires
     if not nom or not email or not message:
@@ -185,17 +231,26 @@ def telecharger_cv(request):
 
     profil = Profil.objects.first()
 
+    # 1. CV envoyé depuis l'admin, sinon 2. CV fourni avec le site
+    chemin = None
     if profil and profil.cv:
-        try:
-            response = FileResponse(
-                open(profil.cv.path, "rb"),
-                as_attachment=True,
-                filename="CV_Mahamat_Hassan.pdf",
-            )
-            logger.info("CV téléchargé")
-            return response
-        except FileNotFoundError:
-            logger.error("Fichier CV introuvable")
-            return redirect("index")
+        chemin = profil.cv.path
+    else:
+        chemin = finders.find(CV_STATIQUE)
+        if not chemin and staticfiles_storage.exists(CV_STATIQUE):
+            chemin = staticfiles_storage.path(CV_STATIQUE)
 
-    return redirect("index")
+    try:
+        response = FileResponse(
+            open(chemin, "rb"),
+            as_attachment=True,
+            filename="CV_Mahamat_Hassan_Oumar.pdf",
+        )
+    except (FileNotFoundError, TypeError):
+        logger.error("Fichier CV introuvable")
+        return redirect("index")
+
+    if est_visiteur_reel(request):
+        compter("telechargements_cv")
+    logger.info("CV téléchargé")
+    return response

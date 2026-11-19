@@ -1,6 +1,7 @@
 # Coller ce contenu
 # Environnement virtuel
 venv/
+.venv/
 env/
 
 # Variables secrètes

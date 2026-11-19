@@ -97,6 +97,56 @@ class Profil(models.Model):
         null=True
     )
 
+    statut = models.CharField(
+        max_length=100,
+        verbose_name="Badge de disponibilité",
+        default="Disponible pour un stage",
+        blank=True,
+        help_text="Affiché en haut de l'accueil quand « Disponible » est coché."
+    )
+
+    roles_animes = models.TextField(
+        verbose_name="Rôles animés (accueil)",
+        default="Data Scientist\nIngénieur Machine Learning\nDéveloppeur Django\nPassionné d'IA",
+        blank=True,
+        help_text="Un rôle par ligne. Ils s'écrivent les uns après les autres sur l'accueil."
+    )
+
+    texte_contact = models.TextField(
+        verbose_name="Texte de la section contact",
+        default="Un stage, un projet data ou une simple question ? Écrivez-moi, je réponds rapidement.",
+        blank=True,
+    )
+
+    texte_footer = models.CharField(
+        max_length=200,
+        verbose_name="Phrase du pied de page",
+        default="Construisons quelque chose d'intelligent.",
+        blank=True,
+        help_text="Le dernier mot est affiché en dégradé de couleur."
+    )
+
+    def get_roles(self):
+        """Retourner les rôles animés sous forme de liste."""
+        return [r.strip() for r in self.roles_animes.splitlines() if r.strip()]
+
+    def get_footer_parts(self):
+        """Séparer la phrase du footer : (début, dernier mot sans ponctuation, ponctuation)."""
+        texte = self.texte_footer.strip()
+        if not texte:
+            return None
+        ponctuation = ""
+        while texte and texte[-1] in ".!?…":
+            ponctuation = texte[-1] + ponctuation
+            texte = texte[:-1]
+        debut, _, fin = texte.rpartition(" ")
+        return {"debut": debut, "fin": fin, "ponctuation": ponctuation}
+
+    def get_ville_pays(self):
+        """Séparer « Ville, Pays »."""
+        ville, _, pays = self.localisation.partition(",")
+        return {"ville": ville.strip(), "pays": pays.strip()}
+
     class Meta:
         verbose_name = "Profil"
         verbose_name_plural = "Profil"
@@ -243,6 +293,18 @@ class Projet(models.Model):
     lien = models.URLField(
         verbose_name="Lien du projet",
         blank=True
+    )
+
+    lien_code = models.URLField(
+        verbose_name="Lien du code source (GitHub)",
+        blank=True
+    )
+
+    categorie = models.CharField(
+        max_length=50,
+        verbose_name="Catégorie",
+        blank=True,
+        help_text="Ex : Machine Learning, Data, Web. Sert aux filtres de la section Projets."
     )
 
     ordre = models.PositiveIntegerField(
@@ -457,3 +519,81 @@ class MessageContact(models.Model):
 
     def __str__(self):
         return f"{self.nom} — {self.sujet}"
+
+# ─────────────────────────────────────────────
+# 9. TECHNOLOGIES (bandeau défilant et orbite)
+# ─────────────────────────────────────────────
+class Technologie(models.Model):
+    """
+    Technologie affichée dans le bandeau défilant de l'accueil.
+    Les 5 premières marquées « orbite » tournent autour de la photo.
+    """
+
+    nom = models.CharField(
+        max_length=60,
+        verbose_name="Nom"
+    )
+
+    icone = models.CharField(
+        max_length=100,
+        verbose_name="Classe icône Font Awesome",
+        default="fa-solid fa-code",
+        help_text="Ex : fa-brands fa-python — liste sur fontawesome.com/icons"
+    )
+
+    afficher_orbite = models.BooleanField(
+        default=False,
+        verbose_name="Tourner autour de la photo",
+        help_text="Maximum 5 affichées."
+    )
+
+    ordre = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Ordre d'affichage"
+    )
+
+    class Meta:
+        verbose_name = "Technologie"
+        verbose_name_plural = "Technologies"
+        ordering = ["ordre"]
+
+    def __str__(self):
+        return self.nom
+
+
+# ─────────────────────────────────────────────
+# 10. STATISTIQUES DE VISITES
+# ─────────────────────────────────────────────
+class VisiteJour(models.Model):
+    """
+    Compteurs agrégés par jour, sans aucune donnée personnelle
+    (ni adresse IP, ni identifiant).
+    """
+
+    date = models.DateField(
+        unique=True,
+        verbose_name="Date"
+    )
+
+    vues = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Visiteurs"
+    )
+
+    vues_mobile = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Dont mobile"
+    )
+
+    telechargements_cv = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Téléchargements du CV"
+    )
+
+    class Meta:
+        verbose_name = "Statistique de visite"
+        verbose_name_plural = "Statistiques de visites"
+        ordering = ["-date"]
+
+    def __str__(self):
+        return f"{self.date} — {self.vues} visiteurs"

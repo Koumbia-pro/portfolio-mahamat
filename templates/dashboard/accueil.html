@@ -1,0 +1,172 @@
+{% extends "dashboard/base.html" %}
+{% load static l10n %}
+
+{% block title %}Vue d'ensemble{% endblock %}
+{% block crumbs %}<b>Vue d'ensemble</b>{% endblock %}
+
+{% block content %}
+
+{# ───── Bienvenue ───── #}
+<section class="welcome">
+  <div class="welcome-id">
+    {% if profil.photo %}
+      <img class="avatar" src="{{ profil.photo.url }}" alt="">
+    {% else %}
+      <img class="avatar" src="{% static 'images/profile.jpg' %}" alt="">
+    {% endif %}
+    <div>
+      <h1>Bonjour {% firstof request.user.first_name request.user.get_username %} 👋</h1>
+      <p>{% if non_lus %}Tu as <strong>{{ non_lus }} nouveau{{ non_lus|pluralize:"x" }} message{{ non_lus|pluralize }}</strong>. {% endif %}Voici comment se porte ton portfolio.</p>
+    </div>
+  </div>
+  <div class="head-actions">
+    <a class="btn btn-ghost" href="{% url 'dashboard:profil' %}"><i class="fa-solid fa-user-pen"></i> Mon profil</a>
+    <a class="btn btn-primary" href="{% url 'dashboard:creer' 'projets' %}"><i class="fa-solid fa-plus"></i> Nouveau projet</a>
+  </div>
+</section>
+
+{# ───── Filtre de période : une ligne, au-dessus de tous les chiffres ───── #}
+<div class="filters-row">
+  <h2>Activité<span>du {{ stats.debut|date:"j F" }} au {{ stats.fin|date:"j F Y" }}</span></h2>
+  <nav class="seg" aria-label="Période">
+    {% for p in stats.periodes %}
+      <a href="?jours={{ p }}" class="{% if p == stats.jours %}on{% endif %}" {% if p == stats.jours %}aria-current="true"{% endif %}>{{ p }} jours</a>
+    {% endfor %}
+  </nav>
+</div>
+
+<div class="kpis">
+  {% for k in stats.kpis %}
+    <div class="card kpi">
+      <div class="kpi-top">
+        <span class="kpi-label">{{ k.label }}</span>
+        <span class="kpi-icon"><i class="fa-solid {{ k.icone }}"></i></span>
+      </div>
+      <div class="kpi-value" data-count="{{ k.valeur|unlocalize }}">{{ k.valeur }}</div>
+      <div class="kpi-foot">
+        {% if k.tendance is not None %}
+          {% if k.tendance > 0 %}<span class="trend up"><i class="fa-solid fa-arrow-trend-up"></i> +{{ k.tendance }} %</span>
+          {% elif k.tendance < 0 %}<span class="trend down"><i class="fa-solid fa-arrow-trend-down"></i> {{ k.tendance }} %</span>
+          {% else %}<span class="trend"><i class="fa-solid fa-minus"></i> 0 %</span>{% endif %}
+          <span>vs {{ stats.jours }} jours précédents</span>
+        {% else %}
+          <span>{{ k.aide }}</span>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<div class="grid-2">
+  {# ───── Graphique : une seule série → pas de légende, le titre la nomme ───── #}
+  <section class="card" aria-labelledby="chartTitle">
+    <div class="card-head"><h2 id="chartTitle"><i class="fa-solid fa-chart-column"></i> Visiteurs par jour</h2></div>
+    <p class="card-sub">Un visiteur est compté une fois par jour. Tes propres visites et les robots sont ignorés.</p>
+    <div class="chart">
+      <div class="yaxis" aria-hidden="true">{% for g in stats.graduations %}<span>{{ g }}</span>{% endfor %}</div>
+      <div class="plot">
+        <div class="gridlines" aria-hidden="true">{% for g in stats.graduations %}<span></span>{% endfor %}</div>
+        <div class="bars" role="list">
+          {% for p in stats.serie %}
+            <div class="bar {% if not p.vues %}zero{% endif %}" role="listitem" tabindex="0"
+                 aria-label="{{ p.label }} : {{ p.vues }} visiteur{{ p.vues|pluralize }}, {{ p.cv }} CV"
+                 style="--h: {{ p.hauteur|unlocalize }}%; --i: {{ forloop.counter0 }}">
+              <span class="bar-fill" style="height: {{ p.hauteur|unlocalize }}%"></span>
+              <span class="tip" aria-hidden="true"><b>{{ p.vues }} visiteur{{ p.vues|pluralize }}</b><small>{{ p.date|date:"l j F" }} · {{ p.cv }} CV</small></span>
+            </div>
+          {% endfor %}
+        </div>
+        {% if not stats.total_vues %}
+          <div class="chart-empty"><div><b>Pas encore de visite sur cette période</b>Partage ton lien pour voir les premières barres.</div></div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="xaxis" aria-hidden="true"><span>{{ stats.serie.0.label }}</span>{% with dernier=stats.serie|last %}<span>{{ dernier.label }}</span>{% endwith %}</div>
+    {% if stats.meilleur %}
+      <p class="chart-note">Meilleur jour : <strong>{{ stats.meilleur.date|date:"l j F" }}</strong> avec {{ stats.meilleur.vues }} visiteur{{ stats.meilleur.vues|pluralize }}.</p>
+    {% endif %}
+    <details class="data-table">
+      <summary>Voir les données en tableau</summary>
+      <table>
+        <thead><tr><th>Jour</th><th>Visiteurs</th><th>CV téléchargés</th></tr></thead>
+        <tbody>{% for p in stats.serie reversed %}<tr><td>{{ p.date|date:"D j M" }}</td><td>{{ p.vues }}</td><td>{{ p.cv }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </details>
+  </section>
+
+  {# ───── Profil complété ───── #}
+  <section class="card" aria-labelledby="profilTitle">
+    <div class="card-head">
+      <h2 id="profilTitle"><i class="fa-solid fa-list-check"></i> Profil complété</h2>
+      <a class="link" href="{% url 'dashboard:profil' %}">Modifier</a>
+    </div>
+    <div class="progress">
+      <div class="ring" role="img" aria-label="Profil complété à {{ profil_info.completion }} %">
+        <svg viewBox="0 0 84 84" aria-hidden="true">
+          <defs><linearGradient id="ringGrad" x1="0" x2="1"><stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
+          <circle class="track" cx="42" cy="42" r="36"/>
+          <circle class="val" cx="42" cy="42" r="36" pathLength="100" stroke-dasharray="{{ profil_info.completion }} 100"/>
+        </svg>
+        <b>{{ profil_info.completion }}%</b>
+      </div>
+      <p>
+        {% if profil_info.completion == 100 %}<strong>Parfait !</strong> Ton profil est complet.
+        {% else %}<strong>Encore quelques détails</strong> Un profil complet inspire plus confiance aux recruteurs.{% endif %}
+      </p>
+    </div>
+    <ul class="checklist">
+      {% for c in profil_info.checklist %}
+        <li>
+          {% if c.ok %}
+            <span class="done"><i class="fa-solid fa-circle-check"></i> {{ c.label }}</span>
+          {% else %}
+            <a href="{{ c.url }}"><i class="fa-regular fa-circle"></i> {{ c.label }} <span class="go">Ajouter →</span></a>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+
+<div class="grid-2">
+  {# ───── Derniers messages ───── #}
+  <section class="card" aria-labelledby="msgTitle">
+    <div class="card-head">
+      <h2 id="msgTitle"><i class="fa-solid fa-inbox"></i> Derniers messages {% if non_lus %}<span class="pill pill-accent">{{ non_lus }} non lu{{ non_lus|pluralize }}</span>{% endif %}</h2>
+      <a class="link" href="{% url 'dashboard:messages' %}">Tout voir</a>
+    </div>
+    {% if derniers_messages %}
+      <ul class="msg-list">
+        {% for m in derniers_messages %}
+          <li>
+            <a class="msg-row" href="{% url 'dashboard:message' m.pk %}">
+              <span class="avatar" aria-hidden="true">{{ m.nom|first|upper }}</span>
+              <span style="min-width:0">
+                <span class="who {% if not m.lu %}unread{% endif %}">{{ m.nom }}</span>
+                <span class="excerpt">{{ m.sujet }} — {{ m.message|truncatechars:90 }}</span>
+              </span>
+              <time datetime="{{ m.date_envoi|date:'c' }}">il y a {{ m.date_envoi|timesince }}</time>
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty"><i class="fa-regular fa-envelope-open"></i>Aucun message pour l'instant.</div>
+    {% endif %}
+  </section>
+
+  {# ───── Mon contenu ───── #}
+  <section class="card" aria-labelledby="contentTitle">
+    <div class="card-head"><h2 id="contentTitle"><i class="fa-solid fa-pen-to-square"></i> Mon contenu</h2></div>
+    <div class="content-grid" style="grid-template-columns: 1fr 1fr">
+      {% for cle, titre, icone, nombre in contenu %}
+        <a class="content-tile" href="{% url 'dashboard:liste' cle %}">
+          <i class="fa-solid {{ icone }}"></i>
+          <span><b>{{ titre }}</b><span>{{ nombre }} élément{{ nombre|pluralize }}</span></span>
+        </a>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+{% endblock %}

@@ -34,7 +34,7 @@ ALLOWED_HOSTS = os.getenv(
 # APPLICATIONS
 # ─────────────────────────────────────────────
 INSTALLED_APPS = [
-    "django.contrib.admin",
+    "portfolio.apps.PortfolioAdminConfig",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -83,19 +83,28 @@ WSGI_APPLICATION = "config.wsgi.application"
 # ─────────────────────────────────────────────
 # BASE DE DONNÉES
 # ─────────────────────────────────────────────
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("DB_NAME"),
-        "USER": os.getenv("DB_USER"),
-        "PASSWORD": os.getenv("DB_PASSWORD"),
-        "HOST": os.getenv("DB_HOST", "localhost"),
-        "PORT": os.getenv("DB_PORT", "5432"),
-        "OPTIONS": {
-            "connect_timeout": 10,
-        },
+# DB_ENGINE=sqlite permet de tester en local sans PostgreSQL.
+if os.getenv("DB_ENGINE", "postgresql") == "sqlite":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": os.getenv("SQLITE_PATH", BASE_DIR / "db.sqlite3"),
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.getenv("DB_NAME"),
+            "USER": os.getenv("DB_USER"),
+            "PASSWORD": os.getenv("DB_PASSWORD"),
+            "HOST": os.getenv("DB_HOST", "localhost"),
+            "PORT": os.getenv("DB_PORT", "5432"),
+            "OPTIONS": {
+                "connect_timeout": 10,
+            },
+        }
+    }
 
 # ─────────────────────────────────────────────
 # MOT DE PASSE
@@ -121,9 +130,14 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
-STATICFILES_STORAGE = (
-    "whitenoise.storage.CompressedManifestStaticFilesStorage"
-)
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # ─────────────────────────────────────────────
 # FICHIERS MEDIA
@@ -171,6 +185,10 @@ if IS_PRODUCTION:
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
+] + [
+    origin.strip()
+    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
 ]
 
 # ─────────────────────────────────────────────
@@ -196,11 +214,6 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "verbose",
         },
-        "file": {
-            "class": "logging.FileHandler",
-            "filename": BASE_DIR / "logs/django.log",
-            "formatter": "verbose",
-        },
     },
     "root": {
         "handlers": ["console"],
@@ -224,3 +237,7 @@ LOGGING = {
 # DIVERS
 # ─────────────────────────────────────────────
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Connexion au tableau de bord
+LOGIN_URL = "dashboard:connexion"
+LOGIN_REDIRECT_URL = "/dashboard/"

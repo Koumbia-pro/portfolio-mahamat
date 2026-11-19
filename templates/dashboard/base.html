@@ -1,0 +1,107 @@
+{% load static %}<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% block title %}Dashboard{% endblock %} · {% firstof profil.nom "Mon portfolio" %}</title>
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+</head>
+<body>
+<div class="layout">
+
+  {# ═════════ MENU LATÉRAL ═════════ #}
+  <aside class="sidebar" id="sidebar" aria-label="Menu du tableau de bord">
+    <a class="brand" href="{% url 'dashboard:accueil' %}">
+      <span class="logo">MH</span>
+      <span><b>Mon dashboard</b><small>Portfolio</small></span>
+    </a>
+
+    <nav>
+      {% for titre, liens in navigation %}
+        <p class="nav-title">{{ titre }}</p>
+        {% for cle, label, icone, url in liens %}
+          <a class="nav-item {% if cle == actif %}on{% endif %}" href="{{ url }}" {% if cle == actif %}aria-current="page"{% endif %}>
+            <i class="fa-solid {{ icone }}"></i> {{ label }}
+            {% if cle == "messages" and non_lus %}<span class="nav-badge">{{ non_lus }}</span>{% endif %}
+          </a>
+        {% endfor %}
+      {% endfor %}
+    </nav>
+
+    <div class="sidebar-foot">
+      <a class="site-link" href="/" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i> Voir mon site</a>
+      <a class="nav-item" href="{% url 'admin:index' %}"><i class="fa-solid fa-screwdriver-wrench"></i> Admin avancé</a>
+      <form method="post" action="{% url 'dashboard:deconnexion' %}">
+        {% csrf_token %}
+        <button class="nav-item" type="submit" style="width:100%"><i class="fa-solid fa-arrow-right-from-bracket"></i> Déconnexion</button>
+      </form>
+    </div>
+  </aside>
+
+  {# ═════════ CONTENU ═════════ #}
+  <div class="main">
+    <header class="topbar">
+      <div class="crumbs">
+        <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Ouvrir le menu" aria-expanded="false"><i class="fa-solid fa-bars"></i></button>
+        {% block crumbs %}<b>Tableau de bord</b>{% endblock %}
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" id="themeToggle" aria-label="Changer de thème">
+          <i class="fa-solid fa-sun when-dark"></i><i class="fa-solid fa-moon when-light"></i>
+        </button>
+        <a class="user-chip" href="{% url 'dashboard:profil' %}">
+          <span>{% firstof request.user.first_name request.user.get_username %}</span>
+          {% if profil.photo %}
+            <img class="avatar" src="{{ profil.photo.url }}" alt="">
+          {% else %}
+            <img class="avatar" src="{% static 'images/profile.jpg' %}" alt="">
+          {% endif %}
+        </a>
+      </div>
+    </header>
+
+    <main class="content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+<div class="scrim" id="scrim"></div>
+
+{# Notifications #}
+<div class="toasts" id="toasts" aria-live="polite">
+  {% for m in messages %}
+    <div class="toast {% if m.level_tag == 'error' %}error{% else %}success{% endif %}" role="status">
+      <i class="fa-solid {% if m.level_tag == 'error' %}fa-circle-exclamation{% else %}fa-circle-check{% endif %}"></i>
+      <span>{{ m }}</span>
+      <button type="button" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+  {% endfor %}
+</div>
+
+{# Boîte de confirmation (suppression) #}
+<dialog class="confirm" id="confirmDialog">
+  <div class="confirm-icon"><i class="fa-solid fa-trash-can"></i></div>
+  <h2 id="confirmTitle">Supprimer ?</h2>
+  <p id="confirmText">Cette action est définitive.</p>
+  <div class="confirm-actions">
+    <button type="button" class="btn btn-ghost" value="cancel" id="confirmCancel">Annuler</button>
+    <button type="button" class="btn btn-danger" id="confirmOk"><i class="fa-solid fa-trash-can"></i> Supprimer</button>
+  </div>
+</dialog>
+
+<script src="{% static 'js/dashboard.js' %}" defer></script>
+</body>
+</html>

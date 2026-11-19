@@ -1,0 +1,56 @@
+{% with t=field.widget_type %}
+<div class="field {% if t == 'textarea' or t == 'clearablefile' or t == 'file' %}wide{% endif %} {% if field.errors %}has-error{% endif %}">
+
+  {% if t == 'checkbox' %}
+    <span class="field-label">{{ field.label }}</span>
+    <label class="switch" for="{{ field.id_for_label }}">
+      <input type="checkbox" class="switch-input" name="{{ field.html_name }}" id="{{ field.id_for_label }}" {% if field.value %}checked{% endif %}>
+      <span class="switch-track" aria-hidden="true"></span>
+      <span>{% if field.value %}Oui{% else %}Non{% endif %}</span>
+    </label>
+
+  {% elif t == 'clearablefile' or t == 'file' %}
+    <label class="field-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+    <div class="upload">
+      {% if field.name == 'cv' %}
+        <span class="upload-preview"><i class="fa-solid fa-file-pdf"></i></span>
+      {% else %}
+        <span class="upload-preview {% if field.name == 'photo' %}round{% endif %}" data-preview-for="{{ field.id_for_label }}">
+          {% if field.value and field.value.url %}<img src="{{ field.value.url }}" alt="">{% else %}<i class="fa-regular fa-image"></i>{% endif %}
+        </span>
+      {% endif %}
+      <div class="upload-body">
+        {% if field.value and field.value.url %}
+          Fichier actuel : <a href="{{ field.value.url }}" target="_blank" rel="noopener">{{ field.value.name|cut:"cv/"|cut:"profile/"|cut:"projets/" }}</a>
+          <label><input type="checkbox" name="{{ field.html_name }}-clear" id="{{ field.id_for_label }}-clear"> Retirer ce fichier</label>
+        {% else %}
+          Aucun fichier pour l'instant.
+        {% endif %}
+        <input type="file" name="{{ field.html_name }}" id="{{ field.id_for_label }}" {% if field.field.widget.attrs.accept %}accept="{{ field.field.widget.attrs.accept }}"{% endif %}>
+      </div>
+    </div>
+
+  {% elif field.name == 'pourcentage' %}
+    <label class="field-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+    <div class="range-field">
+      {{ field }}
+      <output class="range-value" for="{{ field.id_for_label }}">{{ field.value|default:0 }}%</output>
+    </div>
+
+  {% elif field.name == 'icone' %}
+    <label class="field-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+    <div class="icon-field">
+      <span class="icon-preview" aria-hidden="true"><i class="{{ field.value|default:'fa-solid fa-code' }}"></i></span>
+      {{ field }}
+    </div>
+
+  {% else %}
+    <label class="field-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="req">*</span>{% endif %}</label>
+    {{ field }}
+  {% endif %}
+
+  {% if field.help_text and field.name != 'icone' %}<span class="help">{{ field.help_text }}</span>{% endif %}
+  {% if field.name == 'icone' %}<span class="help">Trouve une icône sur <a class="link" href="https://fontawesome.com/search?o=r&amp;m=free" target="_blank" rel="noopener">fontawesome.com</a> et copie sa classe (ex : <code>fa-brands fa-python</code>).</span>{% endif %}
+  {% if field.errors %}<ul class="errors">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+</div>
+{% endwith %}
