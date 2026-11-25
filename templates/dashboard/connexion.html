@@ -1,0 +1,52 @@
+{% load static %}<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Connexion · Mon dashboard</title>
+  {% include "partials/head_commun.html" %}
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+</head>
+<body>
+  <main class="login-page">
+    <div class="login-bg" aria-hidden="true">
+      <div class="login-aurora"></div>
+      <canvas id="loginCanvas"></canvas>
+    </div>
+
+    <div class="login-card">
+      <span class="logo">MH</span>
+      <h1>Bon retour 👋</h1>
+      <p>Connecte-toi pour gérer ton portfolio.</p>
+
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {% if bloque %}
+          <div class="login-error" role="alert">Trop de tentatives de connexion. Réessaie dans 15 minutes.</div>
+        {% elif form.errors %}
+          <div class="login-error" role="alert">
+            {% if form.non_field_errors %}{% for e in form.non_field_errors %}{{ e }}{% endfor %}{% else %}Remplis les deux champs.{% endif %}
+          </div>
+        {% endif %}
+        <div class="field">
+          <label class="field-label" for="{{ form.username.id_for_label }}">Nom d'utilisateur</label>
+          {{ form.username }}
+        </div>
+        <div class="field">
+          <label class="field-label" for="{{ form.password.id_for_label }}">Mot de passe</label>
+          <div class="pw-field">
+            {{ form.password }}
+            <button type="button" class="pw-toggle" id="pwToggle" aria-label="Afficher le mot de passe"><i class="fa-regular fa-eye"></i></button>
+          </div>
+        </div>
+        <input type="hidden" name="next" value="{{ next }}">
+        <button type="submit" class="btn btn-primary btn-block login-submit">Se connecter <i class="fa-solid fa-arrow-right"></i></button>
+      </form>
+
+      <p class="login-foot"><a href="/"><i class="fa-solid fa-arrow-left"></i> Retour au site</a></p>
+    </div>
+  </main>
+  <script src="{% static 'js/dashboard.js' %}" defer></script>
+</body>
+</html>

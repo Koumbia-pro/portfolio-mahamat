@@ -1,0 +1,35 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}{{ msg.sujet }}{% endblock %}
+{% block crumbs %}
+  <a href="{% url 'dashboard:accueil' %}">Dashboard</a><i class="fa-solid fa-chevron-right" style="font-size:10px"></i>
+  <a href="{% url 'dashboard:messages' %}">Messages</a><i class="fa-solid fa-chevron-right" style="font-size:10px"></i>
+  <b>{{ msg.sujet }}</b>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div><a class="link" href="{% url 'dashboard:messages' %}"><i class="fa-solid fa-arrow-left"></i> Retour aux messages</a></div>
+</div>
+
+<article class="card letter">
+  <header class="letter-head">
+    <span class="avatar" aria-hidden="true">{{ msg.nom|first|upper }}</span>
+    <div>
+      <h2>{{ msg.sujet }}</h2>
+      <p><strong>{{ msg.nom }}</strong> · <a class="link" href="mailto:{{ msg.email }}">{{ msg.email }}</a> · {{ msg.date_envoi|date:"l j F Y à H:i" }}</p>
+    </div>
+  </header>
+
+  <div class="letter-body">{{ msg.message }}</div>
+
+  <div class="letter-actions">
+    <a class="btn btn-primary" href="mailto:{{ msg.email }}?subject={{ 'Re: '|add:msg.sujet|urlencode }}"><i class="fa-solid fa-reply"></i> Répondre par email</a>
+    <form method="post" action="{% url 'dashboard:message_action' msg.pk %}">
+      {% csrf_token %}
+      <button class="btn btn-ghost" name="action" value="non-lu"><i class="fa-regular fa-envelope"></i> Marquer non lu</button>
+      <button class="btn btn-danger" name="action" value="supprimer" data-confirm="Ce message de {{ msg.nom }} sera supprimé définitivement."><i class="fa-solid fa-trash-can"></i> Supprimer</button>
+    </form>
+  </div>
+</article>
+{% endblock %}

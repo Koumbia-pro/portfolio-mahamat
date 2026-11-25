@@ -2,7 +2,16 @@
 Modèles — Portfolio Mahamat Hassan Oumar
 """
 
+from django.core.validators import FileExtensionValidator, MaxValueValidator
 from django.db import models
+
+from .images import (
+    TAILLE_PHOTO,
+    TAILLE_PROJET,
+    optimiser_image,
+    valider_pdf,
+    valider_taille_fichier,
+)
 
 
 # ─────────────────────────────────────────────
@@ -39,7 +48,10 @@ class Profil(models.Model):
         upload_to="profile/",
         verbose_name="Photo de profil",
         blank=True,
-        null=True
+        null=True,
+        validators=[valider_taille_fichier],
+        help_text="Un portrait de toi, cadré sur le visage (format vertical ou carré). "
+                  "Elle est redimensionnée automatiquement."
     )
 
     age = models.PositiveIntegerField(
@@ -94,8 +106,68 @@ class Profil(models.Model):
         upload_to="cv/",
         verbose_name="Fichier CV (PDF)",
         blank=True,
-        null=True
+        null=True,
+        validators=[FileExtensionValidator(["pdf"]), valider_taille_fichier, valider_pdf],
     )
+
+    statut = models.CharField(
+        max_length=100,
+        verbose_name="Badge de disponibilité",
+        default="Disponible pour un stage",
+        blank=True,
+        help_text="Affiché en haut de l'accueil quand « Disponible » est coché."
+    )
+
+    roles_animes = models.TextField(
+        verbose_name="Rôles animés (accueil)",
+        default="Data Scientist\nIngénieur Machine Learning\nDéveloppeur Django\nPassionné d'IA",
+        blank=True,
+        help_text="Un rôle par ligne. Ils s'écrivent les uns après les autres sur l'accueil."
+    )
+
+    texte_contact = models.TextField(
+        verbose_name="Texte de la section contact",
+        default="Un stage, un projet data ou une simple question ? Écrivez-moi, je réponds rapidement.",
+        blank=True,
+    )
+
+    texte_footer = models.CharField(
+        max_length=200,
+        verbose_name="Phrase du pied de page",
+        default="Construisons quelque chose d'intelligent.",
+        blank=True,
+        help_text="Le dernier mot est affiché en dégradé de couleur."
+    )
+
+    def get_roles(self):
+        """Retourner les rôles animés sous forme de liste."""
+        return [r.strip() for r in self.roles_animes.splitlines() if r.strip()]
+
+    def get_footer_parts(self):
+        """Séparer la phrase du footer : (début, dernier mot sans ponctuation, ponctuation)."""
+        texte = self.texte_footer.strip()
+        if not texte:
+            return None
+        ponctuation = ""
+        while texte and texte[-1] in ".!?…":
+            ponctuation = texte[-1] + ponctuation
+            texte = texte[:-1]
+        debut, _, fin = texte.rpartition(" ")
+        return {"debut": debut, "fin": fin, "ponctuation": ponctuation}
+
+    def get_ville_pays(self):
+        """Séparer « Ville, Pays »."""
+        ville, _, pays = self.localisation.partition(",")
+        return {"ville": ville.strip(), "pays": pays.strip()}
+
+    def get_email_parts(self):
+        """Séparer l'email autour du @ pour permettre un retour à la ligne propre."""
+        local, _, domaine = self.email.partition("@")
+        return {"local": local, "domaine": domaine}
+
+    def save(self, *args, **kwargs):
+        optimiser_image(self.photo, TAILLE_PHOTO)
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = "Profil"
@@ -152,7 +224,8 @@ class Competence(models.Model):
 
     pourcentage = models.PositiveIntegerField(
         verbose_name="Niveau (%)",
-        help_text="Entre 0 et 100"
+        help_text="Entre 0 et 100",
+        validators=[MaxValueValidator(100)]
     )
 
     ordre = models.PositiveIntegerField(
@@ -231,7 +304,10 @@ class Projet(models.Model):
         upload_to="projets/",
         verbose_name="Image du projet",
         blank=True,
-        null=True
+        null=True,
+        validators=[valider_taille_fichier],
+        help_text="Capture d'écran du projet, idéalement au format paysage 16:9 "
+                  "(ex. 1600 × 900). Sans image, une couverture colorée est générée."
     )
 
     technologies = models.CharField(
@@ -243,6 +319,18 @@ class Projet(models.Model):
     lien = models.URLField(
         verbose_name="Lien du projet",
         blank=True
+    )
+
+    lien_code = models.URLField(
+        verbose_name="Lien du code source (GitHub)",
+        blank=True
+    )
+
+    categorie = models.CharField(
+        max_length=50,
+        verbose_name="Catégorie",
+        blank=True,
+        help_text="Ex : Machine Learning, Data, Web. Sert aux filtres de la section Projets."
     )
 
     ordre = models.PositiveIntegerField(
@@ -269,11 +357,16 @@ class Projet(models.Model):
         return self.titre
 
     def get_technologies_list(self):
-        """Retourner les technologies sous forme de liste."""
+        """Retourner les technologies sous forme de liste (sans entrées vides)."""
         return [
             tech.strip()
             for tech in self.technologies.split(",")
+            if tech.strip()
         ]
+
+    def save(self, *args, **kwargs):
+        optimiser_image(self.image, TAILLE_PROJET)
+        super().save(*args, **kwargs)
 
 
 # ─────────────────────────────────────────────
@@ -457,3 +550,81 @@ class MessageContact(models.Model):
 
     def __str__(self):
         return f"{self.nom} — {self.sujet}"
+
+# ─────────────────────────────────────────────
+# 9. TECHNOLOGIES (bandeau défilant et orbite)
+# ─────────────────────────────────────────────
+class Technologie(models.Model):
+    """
+    Technologie affichée dans le bandeau défilant de l'accueil.
+    Les 5 premières marquées « orbite » tournent autour de la photo.
+    """
+
+    nom = models.CharField(
+        max_length=60,
+        verbose_name="Nom"
+    )
+
+    icone = models.CharField(
+        max_length=100,
+        verbose_name="Classe icône Font Awesome",
+        default="fa-solid fa-code",
+        help_text="Ex : fa-brands fa-python — liste sur fontawesome.com/icons"
+    )
+
+    afficher_orbite = models.BooleanField(
+        default=False,
+        verbose_name="Tourner autour de la photo",
+        help_text="Maximum 5 affichées."
+    )
+
+    ordre = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Ordre d'affichage"
+    )
+
+    class Meta:
+        verbose_name = "Technologie"
+        verbose_name_plural = "Technologies"
+        ordering = ["ordre"]
+
+    def __str__(self):
+        return self.nom
+
+
+# ─────────────────────────────────────────────
+# 10. STATISTIQUES DE VISITES
+# ─────────────────────────────────────────────
+class VisiteJour(models.Model):
+    """
+    Compteurs agrégés par jour, sans aucune donnée personnelle
+    (ni adresse IP, ni identifiant).
+    """
+
+    date = models.DateField(
+        unique=True,
+        verbose_name="Date"
+    )
+
+    vues = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Visiteurs"
+    )
+
+    vues_mobile = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Dont mobile"
+    )
+
+    telechargements_cv = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Téléchargements du CV"
+    )
+
+    class Meta:
+        verbose_name = "Statistique de visite"
+        verbose_name_plural = "Statistiques de visites"
+        ordering = ["-date"]
+
+    def __str__(self):
+        return f"{self.date} — {self.vues} visiteurs"

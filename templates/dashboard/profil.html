@@ -1,0 +1,37 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Mon profil{% endblock %}
+{% block crumbs %}<a href="{% url 'dashboard:accueil' %}">Dashboard</a><i class="fa-solid fa-chevron-right" style="font-size:10px"></i><b>Profil</b>{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Mon profil</h1>
+    <p>Tout ce qui te présente sur ton site : nom, photo, textes, contact et réseaux.</p>
+  </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="form-layout" data-unsaved>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="login-error" style="grid-column:1/-1">{{ form.non_field_errors }}</div>{% endif %}
+
+  <div class="form-cards">
+    {% for groupe in form.groupes %}
+      <section class="card">
+        <div class="card-head"><h2><i class="fa-solid {{ groupe.icone }}"></i> {{ groupe.titre }}</h2></div>
+        <div class="fields">
+          {% for field in groupe.champs %}{% include "dashboard/_champ.html" %}{% endfor %}
+        </div>
+      </section>
+    {% endfor %}
+  </div>
+
+  <aside class="card side-card">
+    <div class="card-body">
+      <button type="submit" class="btn btn-primary btn-block"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</button>
+      <a class="btn btn-ghost btn-block" href="/" target="_blank" rel="noopener"><i class="fa-solid fa-eye"></i> Voir le résultat</a>
+      <p>Les changements apparaissent immédiatement sur ton site.</p>
+    </div>
+  </aside>
+</form>
+{% endblock %}

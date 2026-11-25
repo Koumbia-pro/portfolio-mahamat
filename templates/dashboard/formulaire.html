@@ -1,0 +1,51 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}{% if obj %}Modifier{% else %}{{ conf.nouveau }}{% endif %}{% endblock %}
+{% block crumbs %}
+  <a href="{% url 'dashboard:accueil' %}">Dashboard</a><i class="fa-solid fa-chevron-right" style="font-size:10px"></i>
+  <a href="{% url 'dashboard:liste' section %}">{{ conf.titre }}</a><i class="fa-solid fa-chevron-right" style="font-size:10px"></i>
+  <b>{% if obj %}{{ obj }}{% else %}Nouveau{% endif %}</b>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{% if obj %}Modifier « {{ obj|truncatechars:40 }} »{% else %}{{ conf.nouveau }}{% endif %}</h1>
+    <p>{{ conf.aide }}</p>
+  </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="form-layout" data-unsaved>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="login-error" style="grid-column:1/-1">{{ form.non_field_errors }}</div>{% endif %}
+
+  <section class="card">
+    <div class="card-head"><h2><i class="fa-solid {{ conf.icone }}"></i> Informations</h2></div>
+    <div class="fields">
+      {% for field in form %}{% include "dashboard/_champ.html" %}{% endfor %}
+    </div>
+  </section>
+
+  <aside class="card side-card">
+    <div class="card-body">
+      <button type="submit" class="btn btn-primary btn-block"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</button>
+      {% if not obj %}
+        <button type="submit" name="continuer" value="1" class="btn btn-ghost btn-block"><i class="fa-solid fa-plus"></i> Enregistrer et ajouter un autre</button>
+      {% endif %}
+      <a class="btn btn-ghost btn-block" href="{% url 'dashboard:liste' section %}">Annuler</a>
+      {% if obj %}
+        <div class="danger-zone">
+          <button type="submit" class="btn btn-danger btn-block"
+                  form="deleteForm" data-confirm="« {{ obj }} » sera supprimé définitivement de ton site.">
+            <i class="fa-solid fa-trash-can"></i> Supprimer
+          </button>
+        </div>
+      {% endif %}
+    </div>
+  </aside>
+</form>
+
+{% if obj %}
+  <form id="deleteForm" method="post" action="{% url 'dashboard:supprimer' section obj.pk %}">{% csrf_token %}</form>
+{% endif %}
+{% endblock %}

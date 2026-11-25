@@ -1,0 +1,48 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Messages{% endblock %}
+{% block crumbs %}<a href="{% url 'dashboard:accueil' %}">Dashboard</a><i class="fa-solid fa-chevron-right" style="font-size:10px"></i><b>Messages</b>{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Messages</h1>
+    <p>Tout ce qu'on t'a envoyé via le formulaire de contact de ton site.</p>
+  </div>
+</div>
+
+<section class="card">
+  <div class="inbox-tools">
+    <nav class="seg" aria-label="Filtrer">
+      <a href="?filtre=tous{% if recherche %}&amp;q={{ recherche|urlencode }}{% endif %}" class="{% if filtre != 'non-lus' %}on{% endif %}">Tous <span>({{ total }})</span></a>
+      <a href="?filtre=non-lus{% if recherche %}&amp;q={{ recherche|urlencode }}{% endif %}" class="{% if filtre == 'non-lus' %}on{% endif %}">Non lus <span>({{ non_lus }})</span></a>
+    </nav>
+    <form class="search" method="get" role="search">
+      <input type="hidden" name="filtre" value="{{ filtre }}">
+      <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+      <label class="sr-only" for="q">Rechercher</label>
+      <input class="input" type="search" id="q" name="q" value="{{ recherche }}" placeholder="Rechercher un nom, un sujet…">
+    </form>
+  </div>
+
+  {% if liste %}
+    <ul class="inbox">
+      {% for m in liste %}
+        <li>
+          <a href="{% url 'dashboard:message' m.pk %}" class="{% if not m.lu %}unread{% endif %}">
+            <span class="avatar" aria-hidden="true">{{ m.nom|first|upper }}</span>
+            <span class="from"><b>{{ m.nom }}</b><small>{{ m.email }}</small></span>
+            <span class="subject"><b>{{ m.sujet }}</b> — {{ m.message|truncatechars:120 }}</span>
+            <time datetime="{{ m.date_envoi|date:'c' }}" title="{{ m.date_envoi|date:'j F Y à H:i' }}">{{ m.date_envoi|date:"j M" }}</time>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="empty">
+      <i class="fa-regular fa-envelope-open"></i>
+      {% if recherche %}Aucun message ne correspond à « {{ recherche }} ».{% elif filtre == 'non-lus' %}Tu as tout lu 🎉{% else %}Aucun message pour l'instant.{% endif %}
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

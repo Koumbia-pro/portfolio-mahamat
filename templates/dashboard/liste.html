@@ -1,0 +1,116 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}{{ conf.titre }}{% endblock %}
+{% block crumbs %}
+  <a href="{% url 'dashboard:accueil' %}">Dashboard</a><i class="fa-solid fa-chevron-right" style="font-size:10px"></i>
+  {% if conf.parent %}<a href="{% url 'dashboard:liste' conf.parent.0 %}">{{ conf.parent.1 }}</a><i class="fa-solid fa-chevron-right" style="font-size:10px"></i>{% endif %}
+  <b>{{ conf.titre }}</b>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ conf.titre }}</h1>
+    <p>{{ conf.aide }}</p>
+  </div>
+  <div class="head-actions">
+    {% if conf.lien_secondaire %}
+      <a class="btn btn-ghost" href="{% url 'dashboard:liste' conf.lien_secondaire.0 %}"><i class="fa-solid {{ conf.lien_secondaire.2 }}"></i> {{ conf.lien_secondaire.1 }}</a>
+    {% endif %}
+    <a class="btn btn-primary" href="{% url 'dashboard:creer' section %}"><i class="fa-solid fa-plus"></i> {{ conf.nouveau }}</a>
+  </div>
+</div>
+
+{% if not elements and not groupes %}
+  <div class="card empty-state">
+    <i class="fa-solid {{ conf.icone }}"></i>
+    <h2>Rien pour l'instant</h2>
+    <p>Ajoute ton premier élément : il apparaîtra immédiatement sur ton site.</p>
+    <a class="btn btn-primary" href="{% url 'dashboard:creer' section %}"><i class="fa-solid fa-plus"></i> {{ conf.nouveau }}</a>
+  </div>
+
+{% elif groupes is not None %}
+  {# ───── Compétences regroupées par catégorie ───── #}
+  {% for g in groupes %}
+    <section class="group">
+      <div class="group-head">
+        <h2>{{ g.categorie.nom }}<span>{{ g.elements|length }} compétence{{ g.elements|length|pluralize }}</span></h2>
+        <div class="item-actions">
+          <a class="btn btn-ghost btn-sm" href="{% url 'dashboard:modifier' 'categories' g.categorie.pk %}" aria-label="Renommer la catégorie {{ g.categorie.nom }}"><i class="fa-solid fa-pen"></i></a>
+          <a class="btn btn-ghost btn-sm" href="{% url 'dashboard:creer' 'competences' %}?categorie={{ g.categorie.pk }}"><i class="fa-solid fa-plus"></i> Ajouter</a>
+        </div>
+      </div>
+      <div class="card">
+        {% if g.elements %}
+          <ul class="skill-rows">
+            {% for e in g.elements %}
+              <li class="skill-row">
+                <b>{{ e.titre }}</b>
+                <span class="level"><span class="level-track"><span style="width: {{ e.niveau }}%"></span></span>{{ e.niveau }}%</span>
+                <span class="item-actions">
+                  <a class="btn btn-ghost btn-sm" href="{% url 'dashboard:modifier' section e.obj.pk %}" aria-label="Modifier {{ e.titre }}"><i class="fa-solid fa-pen"></i></a>
+                  <form method="post" action="{% url 'dashboard:supprimer' section e.obj.pk %}">{% csrf_token %}
+                    <button class="btn btn-danger btn-sm" type="submit" data-confirm="« {{ e.titre }} » sera supprimé de ton site." aria-label="Supprimer {{ e.titre }}"><i class="fa-solid fa-trash-can"></i></button>
+                  </form>
+                </span>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="empty">Aucune compétence dans cette catégorie.</div>
+        {% endif %}
+      </div>
+    </section>
+  {% empty %}
+    <div class="card empty-state">
+      <i class="fa-solid fa-folder-tree"></i>
+      <h2>Commence par créer une catégorie</h2>
+      <p>Par exemple « Machine Learning » ou « Web ».</p>
+      <a class="btn btn-primary" href="{% url 'dashboard:creer' 'categories' %}"><i class="fa-solid fa-plus"></i> Nouvelle catégorie</a>
+    </div>
+  {% endfor %}
+
+{% else %}
+  {# ───── Cartes ───── #}
+  <div class="items {{ conf.affichage|default:'' }}">
+    {% for e in elements %}
+      <article class="card item">
+        {% if section == 'projets' %}
+          <div class="item-cover">
+            {% if e.image %}<img src="{{ e.image }}" alt="" loading="lazy">{% else %}<i class="fa-solid fa-folder-open"></i>{% endif %}
+          </div>
+        {% endif %}
+        <div class="item-body">
+          {% if e.icone %}<span class="item-icon"><i class="{{ e.icone }}"></i></span>{% endif %}
+          <div class="item-main">
+            <h3>{{ e.titre }}</h3>
+            {% if e.sous_titre %}<span class="item-sub">{{ e.sous_titre }}</span>{% endif %}
+            {% if e.meta %}<span class="item-meta">{{ e.meta }}</span>{% endif %}
+            {% if e.texte %}<p class="item-text">{{ e.texte }}</p>{% endif %}
+            {% if e.badges %}<div class="item-tags">{% for b in e.badges %}<span>{{ b }}</span>{% endfor %}</div>{% endif %}
+          </div>
+        </div>
+        <div class="item-foot">
+          <div>
+            {% if e.etat %}
+              {% if conf.basculer %}
+                <form method="post" action="{% url 'dashboard:basculer' section e.obj.pk %}">{% csrf_token %}
+                  <button type="submit" class="pill {% if e.etat_on %}pill-on{% endif %}" title="{% if e.etat_on %}{{ conf.basculer_label.0 }}{% else %}{{ conf.basculer_label.1 }}{% endif %}">{{ e.etat }}</button>
+                </form>
+              {% else %}
+                <span class="pill">{{ e.etat }}</span>
+              {% endif %}
+            {% endif %}
+          </div>
+          <div class="item-actions">
+            <a class="btn btn-ghost btn-sm" href="{% url 'dashboard:modifier' section e.obj.pk %}"><i class="fa-solid fa-pen"></i> Modifier</a>
+            <form method="post" action="{% url 'dashboard:supprimer' section e.obj.pk %}">{% csrf_token %}
+              <button class="btn btn-danger btn-sm" type="submit" data-confirm="« {{ e.titre }} » sera supprimé définitivement de ton site." aria-label="Supprimer {{ e.titre }}"><i class="fa-solid fa-trash-can"></i></button>
+            </form>
+          </div>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}
