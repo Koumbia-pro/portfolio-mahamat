@@ -2,7 +2,16 @@
 Modèles — Portfolio Mahamat Hassan Oumar
 """
 
+from django.core.validators import FileExtensionValidator, MaxValueValidator
 from django.db import models
+
+from .images import (
+    TAILLE_PHOTO,
+    TAILLE_PROJET,
+    optimiser_image,
+    valider_pdf,
+    valider_taille_fichier,
+)
 
 
 # ─────────────────────────────────────────────
@@ -39,7 +48,10 @@ class Profil(models.Model):
         upload_to="profile/",
         verbose_name="Photo de profil",
         blank=True,
-        null=True
+        null=True,
+        validators=[valider_taille_fichier],
+        help_text="Un portrait de toi, cadré sur le visage (format vertical ou carré). "
+                  "Elle est redimensionnée automatiquement."
     )
 
     age = models.PositiveIntegerField(
@@ -94,7 +106,8 @@ class Profil(models.Model):
         upload_to="cv/",
         verbose_name="Fichier CV (PDF)",
         blank=True,
-        null=True
+        null=True,
+        validators=[FileExtensionValidator(["pdf"]), valider_taille_fichier, valider_pdf],
     )
 
     statut = models.CharField(
@@ -146,6 +159,15 @@ class Profil(models.Model):
         """Séparer « Ville, Pays »."""
         ville, _, pays = self.localisation.partition(",")
         return {"ville": ville.strip(), "pays": pays.strip()}
+
+    def get_email_parts(self):
+        """Séparer l'email autour du @ pour permettre un retour à la ligne propre."""
+        local, _, domaine = self.email.partition("@")
+        return {"local": local, "domaine": domaine}
+
+    def save(self, *args, **kwargs):
+        optimiser_image(self.photo, TAILLE_PHOTO)
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = "Profil"
@@ -202,7 +224,8 @@ class Competence(models.Model):
 
     pourcentage = models.PositiveIntegerField(
         verbose_name="Niveau (%)",
-        help_text="Entre 0 et 100"
+        help_text="Entre 0 et 100",
+        validators=[MaxValueValidator(100)]
     )
 
     ordre = models.PositiveIntegerField(
@@ -281,7 +304,10 @@ class Projet(models.Model):
         upload_to="projets/",
         verbose_name="Image du projet",
         blank=True,
-        null=True
+        null=True,
+        validators=[valider_taille_fichier],
+        help_text="Capture d'écran du projet, idéalement au format paysage 16:9 "
+                  "(ex. 1600 × 900). Sans image, une couverture colorée est générée."
     )
 
     technologies = models.CharField(
@@ -331,11 +357,16 @@ class Projet(models.Model):
         return self.titre
 
     def get_technologies_list(self):
-        """Retourner les technologies sous forme de liste."""
+        """Retourner les technologies sous forme de liste (sans entrées vides)."""
         return [
             tech.strip()
             for tech in self.technologies.split(",")
+            if tech.strip()
         ]
+
+    def save(self, *args, **kwargs):
+        optimiser_image(self.image, TAILLE_PROJET)
+        super().save(*args, **kwargs)
 
 
 # ─────────────────────────────────────────────

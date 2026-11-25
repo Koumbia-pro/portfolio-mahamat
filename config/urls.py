@@ -1,66 +1,30 @@
 """
-URL configuration for config project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.1/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
-"""
 URLs principales — Portfolio Mahamat Hassan Oumar
 """
 
-from django.contrib import admin
-from django.urls import path, include, re_path
-from django.views.static import serve
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib import admin
+from django.urls import include, path, re_path
+from django.views.static import serve
 
 urlpatterns = [
-
-    # Administration Django
-    path(
-        "admin/",
-        admin.site.urls,
-    ),
+    # Administration Django (chemin configurable avec ADMIN_URL)
+    path(settings.ADMIN_URL, admin.site.urls),
 
     # Tableau de bord personnel
-    path(
-        "dashboard/",
-        include("portfolio.dashboard_urls"),
-    ),
+    path("dashboard/", include("portfolio.dashboard_urls")),
 
     # Application portfolio
-    path(
-        "",
-        include("portfolio.urls"),
-    ),
-
+    path("", include("portfolio.urls")),
 ]
 
-# Fichiers envoyés depuis le dashboard (photo, CV, images de projets).
-# En production, sur Railway, il faut un volume monté sur /app/media
-# pour qu'ils survivent aux redéploiements.
-if not settings.DEBUG:
+if settings.DEBUG:
+    # En développement, Django sert les fichiers envoyés (photo, CV, images).
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+else:
+    # En production, ils sont servis depuis MEDIA_ROOT. Sur Railway, il faut
+    # un volume monté sur ce dossier pour qu'ils survivent aux redéploiements.
     urlpatterns += [
         re_path(r"^media/(?P<path>.*)$", serve, {"document_root": settings.MEDIA_ROOT}),
     ]
-
-# Servir les fichiers media en développement
-if settings.DEBUG:
-    urlpatterns += static(
-        settings.MEDIA_URL,
-        document_root=settings.MEDIA_ROOT,
-    )
-    urlpatterns += static(
-        settings.STATIC_URL,
-        document_root=settings.STATIC_ROOT,
-    )

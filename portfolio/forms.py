@@ -5,6 +5,7 @@ Formulaires du tableau de bord.
 from django import forms
 from django.core.validators import FileExtensionValidator
 
+from .images import valider_pdf, valider_taille_fichier
 from .models import (
     CategorieCompetence,
     Competence,
@@ -56,7 +57,7 @@ class ProfilForm(StyledModelForm):
     cv = forms.FileField(
         required=False,
         label="Fichier CV (PDF)",
-        validators=[FileExtensionValidator(["pdf"])],
+        validators=[FileExtensionValidator(["pdf"]), valider_taille_fichier, valider_pdf],
         widget=forms.ClearableFileInput(attrs={"accept": "application/pdf"}),
         help_text="Si vide, le CV fourni avec le site est proposé aux visiteurs.",
     )
@@ -75,7 +76,7 @@ class ProfilForm(StyledModelForm):
             "roles_animes": forms.Textarea(attrs={"rows": 4}),
             "description_longue": forms.Textarea(attrs={"rows": 8}),
             "texte_contact": forms.Textarea(attrs={"rows": 3}),
-            "photo": forms.ClearableFileInput(attrs={"accept": "image/*"}),
+            "photo": forms.ClearableFileInput(attrs={"accept": "image/jpeg,image/png,image/webp"}),
         }
 
     # Regroupement des champs en cartes
@@ -101,7 +102,7 @@ class ProjetForm(StyledModelForm):
                   "image", "lien", "lien_code", "actif", "ordre"]
         widgets = {
             "description": forms.Textarea(attrs={"rows": 5}),
-            "image": forms.ClearableFileInput(attrs={"accept": "image/*"}),
+            "image": forms.ClearableFileInput(attrs={"accept": "image/jpeg,image/png,image/webp"}),
         }
 
 

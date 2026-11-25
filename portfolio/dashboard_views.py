@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.forms import AuthenticationForm
+from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -25,6 +26,7 @@ from .models import (
     Statistique,
     Technologie,
 )
+from .securite import adresse_ip, limite_connexion_ip, limite_connexion_user
 from .stats import completion_profil, lire_periode, statistiques
 
 
@@ -196,12 +198,40 @@ class ConnexionForm(AuthenticationForm):
 
 
 class ConnexionView(auth_views.LoginView):
+    """
+    Connexion avec limitation des tentatives : après trop d'échecs,
+    l'adresse IP (ou l'identifiant visé) est bloquée 15 minutes.
+    """
     template_name = "dashboard/connexion.html"
     authentication_form = ConnexionForm
     redirect_authenticated_user = True
 
     def get_default_redirect_url(self):
-        return "/dashboard/"
+        return reverse("dashboard:accueil")
+
+    def _cles(self):
+        identifiant = self.request.POST.get("username", "").strip().lower()[:150]
+        return adresse_ip(self.request), identifiant
+
+    def post(self, request, *args, **kwargs):
+        ip, identifiant = self._cles()
+        if limite_connexion_ip.depasse(ip) or (identifiant and limite_connexion_user.depasse(identifiant)):
+            contexte = self.get_context_data(form=self.get_form_class()(request), bloque=True)
+            return self.render_to_response(contexte, status=429)
+        return super().post(request, *args, **kwargs)
+
+    def form_invalid(self, form):
+        ip, identifiant = self._cles()
+        limite_connexion_ip.enregistrer(ip)
+        if identifiant:
+            limite_connexion_user.enregistrer(identifiant)
+        return super().form_invalid(form)
+
+    def form_valid(self, form):
+        ip, identifiant = self._cles()
+        limite_connexion_ip.reinitialiser(ip)
+        limite_connexion_user.reinitialiser(identifiant)
+        return super().form_valid(form)
 
 
 class DeconnexionView(auth_views.LogoutView):
@@ -336,7 +366,6 @@ def messages_liste(request):
         qs = qs.filter(lu=False)
     recherche = request.GET.get("q", "").strip()
     if recherche:
-        from django.db.models import Q
         qs = qs.filter(Q(nom__icontains=recherche) | Q(email__icontains=recherche)
                        | Q(sujet__icontains=recherche) | Q(message__icontains=recherche))
     return rendu(request, "dashboard/messages.html", "messages", {

@@ -133,28 +133,35 @@
   }
 
   /* ─────────── Réseau de neurones (page de connexion) ─────────── */
+  // Version légère : peu de points, liens tracés par lots, 30 images/s,
+  // pause quand l'onglet est caché.
   const canvas = $("#loginCanvas");
   if (canvas && !reduceMotion) {
     const ctx = canvas.getContext("2d");
-    let w, h, nodes = [];
+    const LINK = 130, LINK2 = LINK * LINK, LEVELS = 3;
+    const colors = ["124,92,255", "34,211,238"];
+    let w, h, nodes = [], running = false, last = 0;
     const mouse = { x: -999, y: -999 };
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       w = canvas.clientWidth; h = canvas.clientHeight;
-      canvas.width = w * dpr; canvas.height = h * dpr;
+      canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const n = Math.min(90, Math.round((w * h) / 14000));
+      const n = Math.min(55, Math.round((w * h) / 20000));
       nodes = Array.from({ length: n }, () => ({
         x: Math.random() * w, y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.35, vy: (Math.random() - 0.5) * 0.35,
-        c: Math.random() < 0.5 ? "124,92,255" : "34,211,238",
+        vx: (Math.random() - 0.5) * 0.5, vy: (Math.random() - 0.5) * 0.5,
+        c: Math.random() < 0.5 ? 0 : 1,
       }));
     };
-    window.addEventListener("resize", resize, { passive: true });
+    let resizeTimer;
+    window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(resize, 150); }, { passive: true });
     window.addEventListener("pointermove", (e) => { mouse.x = e.clientX; mouse.y = e.clientY; }, { passive: true });
     resize();
-    const loop = () => {
+    const buckets = [0, 1].map(() => Array.from({ length: LEVELS }, () => []));
+    const frame = () => {
       ctx.clearRect(0, 0, w, h);
+      for (const c of buckets) for (const b of c) b.length = 0;
       for (const n of nodes) {
         n.x += n.vx; n.y += n.vy;
         if (n.x < 0 || n.x > w) n.vx *= -1;
@@ -164,23 +171,43 @@
         const a = nodes[i];
         for (let j = i + 1; j < nodes.length; j++) {
           const b = nodes[j];
-          const d = Math.hypot(a.x - b.x, a.y - b.y);
-          if (d < 140) {
-            ctx.strokeStyle = `rgba(${a.c},${(1 - d / 140) * 0.3})`;
-            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-          }
+          const dx = a.x - b.x, dy = a.y - b.y, d2 = dx * dx + dy * dy;
+          if (d2 < LINK2) buckets[a.c][Math.min(LEVELS - 1, ((1 - d2 / LINK2) * LEVELS) | 0)].push(a.x, a.y, b.x, b.y);
         }
-        const dm = Math.hypot(a.x - mouse.x, a.y - mouse.y);
-        if (dm < 180) {
-          ctx.strokeStyle = `rgba(34,211,238,${(1 - dm / 180) * 0.5})`;
-          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(mouse.x, mouse.y); ctx.stroke();
-        }
-        ctx.fillStyle = `rgba(${a.c},.8)`;
-        ctx.beginPath(); ctx.arc(a.x, a.y, 1.8, 0, Math.PI * 2); ctx.fill();
       }
-      if (!document.hidden) requestAnimationFrame(loop);
+      for (let c = 0; c < 2; c++) {
+        for (let l = 0; l < LEVELS; l++) {
+          const seg = buckets[c][l];
+          if (!seg.length) continue;
+          ctx.strokeStyle = `rgba(${colors[c]},${((l + 1) / LEVELS) * 0.3})`;
+          ctx.beginPath();
+          for (let s = 0; s < seg.length; s += 4) { ctx.moveTo(seg[s], seg[s + 1]); ctx.lineTo(seg[s + 2], seg[s + 3]); }
+          ctx.stroke();
+        }
+      }
+      ctx.strokeStyle = "rgba(34,211,238,.35)";
+      ctx.beginPath();
+      for (const n of nodes) {
+        const dx = n.x - mouse.x, dy = n.y - mouse.y;
+        if (dx * dx + dy * dy < 32400) { ctx.moveTo(n.x, n.y); ctx.lineTo(mouse.x, mouse.y); }
+      }
+      ctx.stroke();
+      for (let c = 0; c < 2; c++) {
+        ctx.fillStyle = `rgba(${colors[c]},.8)`;
+        ctx.beginPath();
+        for (const n of nodes) if (n.c === c) { ctx.moveTo(n.x + 1.8, n.y); ctx.arc(n.x, n.y, 1.8, 0, Math.PI * 2); }
+        ctx.fill();
+      }
     };
-    document.addEventListener("visibilitychange", () => { if (!document.hidden) requestAnimationFrame(loop); });
-    loop();
+    const loop = (t) => {
+      if (!running) return;
+      requestAnimationFrame(loop);
+      if (t - last < 31) return;
+      last = t;
+      frame();
+    };
+    const start = () => { if (!running && !document.hidden) { running = true; requestAnimationFrame(loop); } };
+    document.addEventListener("visibilitychange", () => { if (document.hidden) running = false; else start(); });
+    start();
   }
 })();

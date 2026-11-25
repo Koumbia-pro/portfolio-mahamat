@@ -3,36 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% firstof profil.nom "Mahamat Hassan Oumar" %} — {% firstof profil.titre "Data Science & Machine Learning" %}</title>
-  <meta name="description" content="{% firstof profil.description_courte 'Portfolio de Mahamat Hassan Oumar, étudiant en Master Intelligence Artificielle.' %}">
-  <meta name="theme-color" content="#05060f">
+  {% firstof profil.titre "Data Science & Machine Learning" as titre_pro %}
+  {% firstof profil.description_courte "Portfolio de Mahamat Hassan Oumar, étudiant en Master Intelligence Artificielle." as description %}
+  <title>{{ nom }} — {{ titre_pro }}</title>
+  <meta name="description" content="{{ description|truncatechars:160 }}">
+  <meta name="author" content="{{ nom }}">
+  <link rel="canonical" href="{{ url_canonique }}">
+  <meta name="theme-color" content="#05060f" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f6f7fc" media="(prefers-color-scheme: light)">
 
-  {# Aperçu lors d'un partage (LinkedIn, WhatsApp…) #}
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="{% firstof profil.nom 'Mahamat Hassan Oumar' %} — Portfolio">
-  <meta property="og:description" content="{% firstof profil.description_courte 'Data Science & Machine Learning' %}">
-  <meta property="og:image" content="{% if profil.photo %}{{ request.scheme }}://{{ request.get_host }}{{ profil.photo.url }}{% else %}{{ request.scheme }}://{{ request.get_host }}{% static 'images/profile.jpg' %}{% endif %}">
+  {# Aperçu lors d'un partage (LinkedIn, WhatsApp, X…) #}
+  <meta property="og:type" content="profile">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:site_name" content="{{ nom }}">
+  <meta property="og:title" content="{{ nom }} — {{ titre_pro }}">
+  <meta property="og:description" content="{{ description|truncatechars:200 }}">
+  <meta property="og:url" content="{{ url_canonique }}">
+  <meta property="og:image" content="{{ image_partage }}">
+  <meta property="og:image:alt" content="Portrait de {{ nom }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ nom }} — {{ titre_pro }}">
+  <meta name="twitter:description" content="{{ description|truncatechars:200 }}">
+  <meta name="twitter:image" content="{{ image_partage }}">
+  {% if json_ld %}<script type="application/ld+json">{{ json_ld }}</script>{% endif %}
 
-  {# Thème appliqué avant l'affichage pour éviter un flash #}
-  <script>
-    (function () {
-      var d = document.documentElement;
-      d.classList.add("js");
-      try {
-        var t = localStorage.getItem("theme");
-        if (t === "light" || t === "dark") d.setAttribute("data-theme", t);
-      } catch (e) {}
-    })();
-  </script>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  {% include "partials/head_commun.html" %}
+  <link rel="preload" as="image" href="{% if profil.photo %}{{ profil.photo.url }}{% else %}{% static 'images/profile.jpg' %}{% endif %}" fetchpriority="high">
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 
 <body>
+  <a class="skip-link" href="#contenu">Aller au contenu</a>
 
   {# ═══════════ PRÉCHARGEMENT ═══════════ #}
   <div class="preloader" id="preloader" aria-hidden="true">
@@ -70,8 +71,8 @@
           <i class="fa-solid fa-moon theme-moon"></i>
           <i class="fa-solid fa-sun theme-sun"></i>
         </button>
-        <a class="btn btn-primary btn-sm magnetic" href="{% url 'telecharger_cv' %}">
-          <i class="fa-solid fa-download"></i><span>CV</span>
+        <a class="btn btn-primary btn-sm magnetic" href="{% url 'telecharger_cv' %}" aria-label="Télécharger mon CV (PDF)">
+          <i class="fa-solid fa-download" aria-hidden="true"></i><span>CV</span>
         </a>
         <button class="icon-btn menu-btn" id="menuBtn" aria-label="Ouvrir le menu" aria-expanded="false">
           <span></span><span></span>
@@ -80,7 +81,7 @@
     </nav>
   </header>
 
-  <main>
+  <main id="contenu" tabindex="-1">
 
     {# ═══════════ ACCUEIL ═══════════ #}
     <section class="hero" id="accueil">
@@ -97,15 +98,15 @@
           {% endif %}
 
           <h1 class="hero-title">
-            <span class="hero-hello reveal">Bonjour, je suis</span>
-            <span class="hero-name split-text">{% firstof profil.nom "Mahamat Hassan Oumar" %}</span>
+            <span class="hero-hello reveal">Bonjour, je m'appelle</span>
+            <span class="hero-name split-text">{{ nom }}</span>
           </h1>
 
           {% with roles=profil.get_roles %}
           {% if roles %}
             <p class="hero-role reveal">
               <span class="role-static">Je suis</span>
-              <span class="typewriter" id="typewriter" data-words="{{ roles|join:'|' }}">{{ roles.0 }}</span><span class="caret" aria-hidden="true"></span>
+              <span class="typewriter" id="typewriter" data-words="{{ roles|join:'|' }}" aria-hidden="true">{{ roles.0 }}</span><span class="sr-only">{{ roles|join:", " }}</span><span class="caret" aria-hidden="true"></span>
             </p>
           {% endif %}
           {% endwith %}
@@ -124,10 +125,10 @@
           </div>
 
           <div class="hero-socials reveal">
-            {% if profil.github %}<a href="{{ profil.github }}" target="_blank" rel="noopener" aria-label="GitHub" class="magnetic"><i class="fa-brands fa-github"></i></a>{% endif %}
-            {% if profil.linkedin %}<a href="{{ profil.linkedin }}" target="_blank" rel="noopener" aria-label="LinkedIn" class="magnetic"><i class="fa-brands fa-linkedin-in"></i></a>{% endif %}
-            {% if profil.twitter %}<a href="{{ profil.twitter }}" target="_blank" rel="noopener" aria-label="X" class="magnetic"><i class="fa-brands fa-x-twitter"></i></a>{% endif %}
-            {% if profil.email %}<a href="mailto:{{ profil.email }}" aria-label="Email" class="magnetic"><i class="fa-regular fa-envelope"></i></a>{% endif %}
+            {% if profil.github %}<a href="{{ profil.github }}" target="_blank" rel="noopener noreferrer" aria-label="GitHub (nouvel onglet)" class="magnetic"><i class="fa-brands fa-github" aria-hidden="true"></i></a>{% endif %}
+            {% if profil.linkedin %}<a href="{{ profil.linkedin }}" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn (nouvel onglet)" class="magnetic"><i class="fa-brands fa-linkedin-in" aria-hidden="true"></i></a>{% endif %}
+            {% if profil.twitter %}<a href="{{ profil.twitter }}" target="_blank" rel="noopener noreferrer" aria-label="X (nouvel onglet)" class="magnetic"><i class="fa-brands fa-x-twitter" aria-hidden="true"></i></a>{% endif %}
+            {% if profil.email %}<a href="mailto:{{ profil.email }}" aria-label="M'écrire un email" class="magnetic"><i class="fa-regular fa-envelope" aria-hidden="true"></i></a>{% endif %}
           </div>
         </div>
 
@@ -135,11 +136,9 @@
           <div class="portrait">
             <div class="portrait-ring"></div>
             <div class="portrait-glow"></div>
-            {% if profil.photo %}
-              <img src="{{ profil.photo.url }}" alt="Portrait de {{ profil.nom }}" class="portrait-img">
-            {% else %}
-              <img src="{% static 'images/profile.jpg' %}" alt="Portrait de {% firstof profil.nom 'Mahamat Hassan Oumar' %}" class="portrait-img">
-            {% endif %}
+            <img src="{% if profil.photo %}{{ profil.photo.url }}{% else %}{% static 'images/profile.jpg' %}{% endif %}"
+                 alt="Portrait de {{ nom }}" class="portrait-img"
+                 width="400" height="400" fetchpriority="high" decoding="async">
 
             {% if technologies_orbite %}
               <div class="orbit" aria-hidden="true" style="--n: {{ technologies_orbite|length }}">
@@ -149,18 +148,16 @@
               </div>
             {% endif %}
 
-            {% with formation=formations.first %}
-              {% if formation %}
-                <div class="float-card fc-1">
-                  <i class="fa-solid fa-graduation-cap"></i>
-                  <div><b>{{ formation.diplome|truncatechars:28 }}</b><span>{{ formation.etablissement|truncatechars:30 }}</span></div>
-                </div>
-              {% endif %}
-            {% endwith %}
+            {% if premiere_formation %}
+              <div class="float-card fc-1">
+                <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i>
+                <div><b>{{ premiere_formation.diplome|truncatechars:28 }}</b><span>{{ premiere_formation.etablissement|truncatechars:30 }}</span></div>
+              </div>
+            {% endif %}
             {% if profil.localisation %}
               {% with lieu=profil.get_ville_pays %}
                 <div class="float-card fc-2">
-                  <i class="fa-solid fa-location-dot"></i>
+                  <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
                   <div><b>{{ lieu.ville }}</b>{% if lieu.pays %}<span>{{ lieu.pays }}</span>{% endif %}</div>
                 </div>
               {% endwith %}
@@ -176,11 +173,11 @@
 
     {# ═══════════ BANDEAU DE TECHNOLOGIES ═══════════ #}
     {% if technologies %}
-    <div class="marquee" aria-label="Technologies">
+    <div class="marquee" role="region" aria-label="Technologies utilisées">
       <div class="marquee-track">
         {% for _ in "12" %}
           <div class="marquee-group" {% if forloop.last %}aria-hidden="true"{% endif %}>
-            {% for tech in technologies %}<span><i class="{{ tech.icone }}"></i> {{ tech.nom }}</span>{% endfor %}
+            {% for tech in technologies %}<span><i class="{{ tech.icone }}" aria-hidden="true"></i> {{ tech.nom }}</span>{% endfor %}
           </div>
         {% endfor %}
       </div>
@@ -207,14 +204,14 @@
               {% if profil.localisation %}<li><i class="fa-solid fa-location-dot"></i><span>Localisation</span><b>{{ profil.localisation }}</b></li>{% endif %}
               {% if profil.langues %}<li><i class="fa-solid fa-language"></i><span>Langues</span><b>{{ profil.langues }}</b></li>{% endif %}
               {% if profil.age %}<li><i class="fa-regular fa-calendar"></i><span>Âge</span><b>{{ profil.age }} ans</b></li>{% endif %}
-              {% if profil.email %}<li><i class="fa-regular fa-envelope"></i><span>Email</span><b>{{ profil.email }}</b></li>{% endif %}
+              {% if profil.email %}{% with e=profil.get_email_parts %}<li><i class="fa-regular fa-envelope"></i><span>Email</span><b>{{ e.local }}@<wbr>{{ e.domaine }}</b></li>{% endwith %}{% endif %}
             </ul>
           </div>
 
           <div class="stats-grid">
             {% for stat in statistiques %}
               <div class="stat-card reveal spotlight" style="--d:{{ forloop.counter0 }}">
-                <i class="{{ stat.icone }}"></i>
+                <i class="{{ stat.icone }}" aria-hidden="true"></i>
                 <strong class="counter" data-value="{{ stat.valeur }}">{{ stat.valeur }}</strong>
                 <span>{{ stat.label }}</span>
               </div>
@@ -280,30 +277,30 @@
             <article class="project-card reveal tilt spotlight" style="--d:{{ forloop.counter0 }}" data-category="{{ projet.categorie|slugify }}">
               <div class="project-cover cover-{% cycle '1' '2' '3' '4' %}">
                 {% if projet.image %}
-                  <img src="{{ projet.image.url }}" alt="Aperçu du projet {{ projet.titre }}" loading="lazy">
+                  <img src="{{ projet.image.url }}" alt="Aperçu du projet {{ projet.titre }}" loading="lazy" decoding="async" width="800" height="450">
                 {% else %}
                   <span class="cover-grid" aria-hidden="true"></span>
                   <i class="cover-icon fa-solid {% cycle 'fa-wheat-awn' 'fa-chart-line' 'fa-laptop-code' 'fa-cloud' %}" aria-hidden="true"></i>
                 {% endif %}
-                <span class="project-index">{{ forloop.counter|stringformat:"02d" }}</span>
+                <span class="project-index" aria-hidden="true">{{ forloop.counter|stringformat:"02d" }}</span>
                 {% if projet.categorie %}<span class="project-cat">{{ projet.categorie }}</span>{% endif %}
               </div>
               <div class="project-body">
                 <h3>{{ projet.titre }}</h3>
-                <p>{{ projet.description }}</p>
+                <p>{{ projet.description|linebreaksbr }}</p>
                 <div class="tags">
                   {% for tech in projet.get_technologies_list %}<span>{{ tech }}</span>{% endfor %}
                 </div>
                 {% if projet.lien or projet.lien_code %}
                   <div class="project-links">
                     {% if projet.lien %}
-                      <a href="{{ projet.lien }}" target="_blank" rel="noopener" class="project-link">
-                        Voir le projet <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                      <a href="{{ projet.lien }}" target="_blank" rel="noopener noreferrer" class="project-link">
+                        Voir le projet <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i><span class="sr-only"> {{ projet.titre }} (nouvel onglet)</span>
                       </a>
                     {% endif %}
                     {% if projet.lien_code %}
-                      <a href="{{ projet.lien_code }}" target="_blank" rel="noopener" class="project-link">
-                        <i class="fa-brands fa-github"></i> Code source
+                      <a href="{{ projet.lien_code }}" target="_blank" rel="noopener noreferrer" class="project-link">
+                        <i class="fa-brands fa-github" aria-hidden="true"></i> Code source<span class="sr-only"> de {{ projet.titre }} (nouvel onglet)</span>
                       </a>
                     {% endif %}
                   </div>
@@ -329,7 +326,7 @@
           {% for service in services %}
             <article class="service-card reveal spotlight" style="--d:{{ forloop.counter0 }}">
               <span class="service-num">{{ forloop.counter|stringformat:"02d" }}</span>
-              <span class="service-icon"><i class="{{ service.icone }}"></i></span>
+              <span class="service-icon" aria-hidden="true"><i class="{{ service.icone }}"></i></span>
               <h3>{{ service.titre }}</h3>
               <p>{{ service.description }}</p>
             </article>
@@ -402,21 +399,23 @@
 
             <div class="contact-items">
               {% if profil.email %}
-                <button type="button" class="contact-item" data-copy="{{ profil.email }}">
-                  <i class="fa-regular fa-envelope"></i>
-                  <span><small>Email</small><b>{{ profil.email }}</b></span>
+                {% with e=profil.get_email_parts %}
+                <button type="button" class="contact-item" data-copy="{{ profil.email }}" aria-label="Copier l'adresse email {{ profil.email }}">
+                  <i class="fa-regular fa-envelope" aria-hidden="true"></i>
+                  <span><small>Email · cliquer pour copier</small><b>{{ e.local }}@<wbr>{{ e.domaine }}</b></span>
                   <i class="fa-regular fa-copy copy-icon" aria-hidden="true"></i>
                 </button>
+                {% endwith %}
               {% endif %}
               {% if profil.telephone %}
                 <a class="contact-item" href="tel:{{ profil.telephone|cut:' ' }}">
-                  <i class="fa-solid fa-phone"></i>
+                  <i class="fa-solid fa-phone" aria-hidden="true"></i>
                   <span><small>Téléphone</small><b>{{ profil.telephone }}</b></span>
                 </a>
               {% endif %}
               {% if profil.localisation %}
                 <div class="contact-item">
-                  <i class="fa-solid fa-location-dot"></i>
+                  <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
                   <span><small>Localisation</small><b>{{ profil.localisation }}</b></span>
                 </div>
               {% endif %}
@@ -425,14 +424,18 @@
 
           <form class="contact-form" id="contactForm" method="POST" action="{% url 'contact' %}" novalidate>
             {% csrf_token %}
+            {# Piège à robots : invisible pour les humains, ignoré par les lecteurs d'écran #}
+            <div class="hp-field" aria-hidden="true">
+              <label>Site web <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+            </div>
             <div class="form-row">
               <label class="field">
                 <input type="text" name="name" placeholder=" " required maxlength="100" autocomplete="name">
-                <span>Nom complet</span>
+                <span>Nom complet *</span>
               </label>
               <label class="field">
-                <input type="email" name="email" placeholder=" " required autocomplete="email">
-                <span>Email</span>
+                <input type="email" name="email" placeholder=" " required maxlength="254" autocomplete="email" inputmode="email">
+                <span>Email *</span>
               </label>
             </div>
             <label class="field">
@@ -440,9 +443,10 @@
               <span>Sujet</span>
             </label>
             <label class="field">
-              <textarea name="message" placeholder=" " required maxlength="5000" rows="5"></textarea>
-              <span>Votre message</span>
+              <textarea name="message" placeholder=" " required minlength="10" maxlength="5000" rows="5"></textarea>
+              <span>Votre message *</span>
             </label>
+            <p class="form-note">* Champs obligatoires. Vos coordonnées servent uniquement à vous répondre.</p>
             <button type="submit" class="btn btn-primary btn-lg btn-block magnetic">
               <span class="btn-text">Envoyer le message</span>
               <i class="fa-solid fa-paper-plane"></i>
@@ -469,19 +473,19 @@
       <div class="footer-bottom">
         <div class="footer-brand">
           <span class="nav-logo">MH</span>
-          <span>© <span id="year">2026</span> {% firstof profil.nom "Mahamat Hassan Oumar" %}</span>
+          <span>© {% now "Y" %} {{ nom }}</span>
         </div>
         <div class="footer-links">
           <a href="#apropos">À propos</a>
-          <a href="#projets">Projets</a>
-          <a href="#parcours">Parcours</a>
+          {% if projets %}<a href="#projets">Projets</a>{% endif %}
+          {% if experiences or formations %}<a href="#parcours">Parcours</a>{% endif %}
           <a href="#contact">Contact</a>
         </div>
         <div class="socials">
-          {% if profil.github %}<a href="{{ profil.github }}" target="_blank" rel="noopener" aria-label="GitHub"><i class="fa-brands fa-github"></i></a>{% endif %}
-          {% if profil.linkedin %}<a href="{{ profil.linkedin }}" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>{% endif %}
-          {% if profil.twitter %}<a href="{{ profil.twitter }}" target="_blank" rel="noopener" aria-label="X"><i class="fa-brands fa-x-twitter"></i></a>{% endif %}
-          {% if profil.email %}<a href="mailto:{{ profil.email }}" aria-label="Email"><i class="fa-regular fa-envelope"></i></a>{% endif %}
+          {% if profil.github %}<a href="{{ profil.github }}" target="_blank" rel="noopener noreferrer" aria-label="GitHub (nouvel onglet)"><i class="fa-brands fa-github" aria-hidden="true"></i></a>{% endif %}
+          {% if profil.linkedin %}<a href="{{ profil.linkedin }}" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn (nouvel onglet)"><i class="fa-brands fa-linkedin-in" aria-hidden="true"></i></a>{% endif %}
+          {% if profil.twitter %}<a href="{{ profil.twitter }}" target="_blank" rel="noopener noreferrer" aria-label="X (nouvel onglet)"><i class="fa-brands fa-x-twitter" aria-hidden="true"></i></a>{% endif %}
+          {% if profil.email %}<a href="mailto:{{ profil.email }}" aria-label="M'écrire un email"><i class="fa-regular fa-envelope" aria-hidden="true"></i></a>{% endif %}
         </div>
       </div>
     </div>

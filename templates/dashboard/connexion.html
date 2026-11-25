@@ -5,18 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
   <title>Connexion · Mon dashboard</title>
-  <script>
-    (function () {
-      try {
-        var t = localStorage.getItem("theme");
-        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
-      } catch (e) {}
-    })();
-  </script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  {% include "partials/head_commun.html" %}
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
 </head>
 <body>
@@ -33,7 +22,9 @@
 
       <form method="post" novalidate>
         {% csrf_token %}
-        {% if form.errors %}
+        {% if bloque %}
+          <div class="login-error" role="alert">Trop de tentatives de connexion. Réessaie dans 15 minutes.</div>
+        {% elif form.errors %}
           <div class="login-error" role="alert">
             {% if form.non_field_errors %}{% for e in form.non_field_errors %}{{ e }}{% endfor %}{% else %}Remplis les deux champs.{% endif %}
           </div>
@@ -50,7 +41,7 @@
           </div>
         </div>
         <input type="hidden" name="next" value="{{ next }}">
-        <button type="submit" class="btn btn-primary btn-block" style="margin-top:6px">Se connecter <i class="fa-solid fa-arrow-right"></i></button>
+        <button type="submit" class="btn btn-primary btn-block login-submit">Se connecter <i class="fa-solid fa-arrow-right"></i></button>
       </form>
 
       <p class="login-foot"><a href="/"><i class="fa-solid fa-arrow-left"></i> Retour au site</a></p>

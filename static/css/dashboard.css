@@ -480,8 +480,7 @@ dialog.confirm p { margin-top: 6px; color: var(--muted); font-size: 14px; }
   position: relative; z-index: 2;
   width: min(420px, 100%); padding: 36px 32px;
   border-radius: 24px;
-  background: color-mix(in srgb, var(--card) 80%, transparent);
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  background: color-mix(in srgb, var(--card) 95%, transparent);
   border: 1px solid var(--border-strong); box-shadow: var(--shadow);
   animation: toastIn .8s var(--ease) both;
 }
@@ -541,3 +540,7 @@ dialog.confirm p { margin-top: 6px; color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
 }
+
+/* ─────────── Ajouts : boutons sans style en ligne (compatibles CSP) ─────────── */
+.nav-item-block { width: 100%; }
+.login-submit { margin-top: 6px; }
