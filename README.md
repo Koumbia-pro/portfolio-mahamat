@@ -48,6 +48,12 @@ python manage.py runserver
 | `python manage.py optimiser_images [--appliquer]` | Allège les images déjà envoyées |
 | `python manage.py check --deploy` | Vérifie la configuration de production |
 
+## Déploiement sur o2switch (koumbia.eulogeolou.com)
+
+Guide pas à pas : [docs/DEPLOIEMENT_O2SWITCH.md](docs/DEPLOIEMENT_O2SWITCH.md).
+En résumé : application cPanel « Setup Python App » (Passenger, fichier `passenger_wsgi.py`),
+base SQLite, configuration dans `.env`, mises à jour avec `bash deploy/o2switch.sh`.
+
 ## Déploiement sur Railway
 
 1. Créer un service depuis le dépôt GitHub et ajouter une base **PostgreSQL**
@@ -63,6 +69,7 @@ python manage.py runserver
    | `ALLOWED_HOSTS` | `mon-domaine.com` (le domaine Railway est ajouté automatiquement) |
    | `CSRF_TRUSTED_ORIGINS` | `https://mon-domaine.com` |
    | `ADMIN_URL` | `gestion-xxxx/` (chemin difficile à deviner) |
+| `USE_X_FORWARDED_FOR` | `True` (Railway est derrière un proxy) |
    | `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` | compte Gmail + mot de passe d'application |
 
 4. Le `Procfile` exécute `collectstatic`, `migrate` puis lance Gunicorn.

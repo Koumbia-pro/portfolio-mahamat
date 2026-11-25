@@ -126,6 +126,8 @@ if os.getenv("DB_ENGINE", "postgresql") == "sqlite":
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": os.getenv("SQLITE_PATH", BASE_DIR / "db.sqlite3"),
+            # Attendre jusqu'à 20 s si un autre processus écrit en même temps
+            "OPTIONS": {"timeout": 20},
         }
     }
 elif DATABASE_URL:
@@ -161,12 +163,22 @@ if DATABASES["default"]["ENGINE"].endswith("postgresql"):
 # ─────────────────────────────────────────────
 # CACHE (limitation des tentatives de connexion et des messages)
 # ─────────────────────────────────────────────
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "portfolio",
+# En production, cache sur disque : partagé entre tous les processus du serveur
+# (Passenger chez o2switch, Gunicorn ailleurs), donc les limites restent fiables.
+if IS_PRODUCTION and not TESTING:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
+            "LOCATION": os.getenv("CACHE_DIR", str(BASE_DIR / "var" / "cache")),
+        }
     }
-}
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "portfolio",
+        }
+    }
 
 # ─────────────────────────────────────────────
 # MOT DE PASSE
@@ -194,7 +206,7 @@ USE_TZ = True
 # FICHIERS STATIQUES
 # ─────────────────────────────────────────────
 STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
+STATIC_ROOT = Path(os.getenv("STATIC_ROOT", BASE_DIR / "staticfiles"))
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STORAGES = {
     "default": {
@@ -271,9 +283,13 @@ X_FRAME_OPTIONS = "DENY"
 # ─────────────────────────────────────────────
 # SÉCURITÉ EN PRODUCTION
 # ─────────────────────────────────────────────
+# Adresse IP du visiteur : ne lire X-Forwarded-For que derrière un proxy de confiance
+# (Railway : True). Sur o2switch, Apache transmet directement la vraie adresse.
+USE_X_FORWARDED_FOR = env_bool("USE_X_FORWARDED_FOR", False)
+
 if IS_PRODUCTION:
-    # Railway (et la plupart des hébergeurs) terminent le HTTPS devant Django :
-    # sans cette ligne, SECURE_SSL_REDIRECT provoque une boucle de redirections.
+    # Si un proxy termine le HTTPS devant Django (Railway…), il l'indique dans
+    # X-Forwarded-Proto. Sans en-tête, Django utilise le schéma réel de la requête.
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", True)
     SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", 31536000))

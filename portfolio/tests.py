@@ -168,6 +168,14 @@ class ContactTests(BaseTest):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(MessageContact.objects.count(), 1)
 
+    @override_settings(USE_X_FORWARDED_FOR=False)
+    def test_x_forwarded_for_ignore_sans_proxy(self):
+        """Sans proxy de confiance, changer X-Forwarded-For ne contourne pas la limite."""
+        for i in range(5):
+            self.client.post(self.url, self.valide, HTTP_X_FORWARDED_FOR=f"10.0.0.{i}")
+        r = self.client.post(self.url, self.valide, HTTP_X_FORWARDED_FOR="10.0.0.99")
+        self.assertEqual(r.status_code, 429)
+
     def test_csrf_obligatoire(self):
         from django.test import Client
         client = Client(enforce_csrf_checks=True)

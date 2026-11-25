@@ -10,11 +10,12 @@ def adresse_ip(request):
     """
     Adresse IP du visiteur.
 
-    En production, Django est derrière le proxy de l'hébergeur, qui ajoute
-    la vraie adresse à la FIN de X-Forwarded-For. On prend donc la dernière
-    valeur (les premières peuvent être inventées par le visiteur).
+    Derrière un proxy de confiance (USE_X_FORWARDED_FOR=True, ex. Railway),
+    la vraie adresse est ajoutée à la FIN de X-Forwarded-For : on prend la
+    dernière valeur (les premières peuvent être inventées par le visiteur).
+    Sinon (o2switch), on ignore cet en-tête, que n'importe qui peut falsifier.
     """
-    if settings.IS_PRODUCTION:
+    if settings.USE_X_FORWARDED_FOR:
         transmis = request.META.get("HTTP_X_FORWARDED_FOR", "")
         if transmis:
             return transmis.split(",")[-1].strip()

@@ -24,6 +24,10 @@ db.sqlite3
 db.sqlite3-journal
 media/
 staticfiles/
+var/
+tmp/
+# Export du contenu (contient des données personnelles)
+contenu*
 
 # Éditeurs
 .vscode/
